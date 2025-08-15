@@ -2,7 +2,11 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+// math
+constexpr float PI = 3.14159265358979323846f;
+
 // texture unit for PBR 
+constexpr unsigned DEFAULT_TEXTURE_UNIT    = 0;
 constexpr unsigned ALBEDO_TEXTURE_UNIT     = 0;
 constexpr unsigned NORMAL_TEXTURE_UNIT     = 1;
 constexpr unsigned ROUGHNESS_TEXTURE_UNIT  = 2;

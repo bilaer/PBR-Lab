@@ -10,6 +10,8 @@
 #include "geometry.h"
 #include "env.h"
 #include "material.h"
+#include "config.h"
+#include <glm/glm.hpp>
 
 // ======== Camera state ========
 float lastX = 400, lastY = 300;
@@ -90,6 +92,7 @@ GLFWwindow* CreateWindowAndContext(int winW, int winH, const char* title) {
     return window;
 }
 
+// Show brdf as texture to check if it is correct
 void ShowBRDFLUTDebugWindow(GLuint brdfLUT, GLFWwindow* sharedContext, const std::shared_ptr<ScreenQuad>& screenQuad) {
     // ✅ 显示窗口
     glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
@@ -132,7 +135,6 @@ void ShowBRDFLUTDebugWindow(GLuint brdfLUT, GLFWwindow* sharedContext, const std
 
     glfwDestroyWindow(debugWindow);
 }
-
 
 // ======== Render loop (single window, no black bars) ========
 // --------------TODO: will be replaced with Skybox class and camera class
@@ -189,12 +191,12 @@ int main() {
     auto screenQuad = std::make_shared<ScreenQuad>();
     Environment env; // Create env object to load irradiance, prefilter and brdf lut
 
+    //================Env maps=======================
     // load prefilter map
     const unsigned int prefilterSize = 128;
     const unsigned int mipLevels = 8;
     std::string prefilterPath = "debug/prefilter.ktx";
     env.LoadPrefilterMap(prefilterPath, prefilterSize, mipLevels);
-
 
     // load irradiance map
     const unsigned int irradianceSize = 32;
@@ -207,11 +209,41 @@ int main() {
     unsigned int brdfSize = 512;
     env.LoadBRDFLut(brdflutktxPath, brdfSize);
 
-
+    // Debug
     //ShowBRDFLUTDebugWindow(env.GetBRDFLUT(), window, screenQuad);
+    //RunDebugLoop(window, env.GetPrefilter(), cube);
 
-    // Debug window
-    RunDebugLoop(window, env.GetPrefilter(), cube);
+    // ==============Load texture for PBR material===================
+    std::string roughnessPath = "assets/test/roughness.jpg";
+    std::string metalPath = "assets/test/metal.jpg";
+    std::string normalPath = "assets/test/normal.png";
+    std::string albedoPath = "assets/test/color.jpg";
+    
+    // Create material with texture
+    auto texMaterial = std::make_shared<PBRMaterial>();
+    texMaterial->LoadAlbedoMap(albedoPath);
+    texMaterial->LoadMetalnessMap(metalPath);
+    texMaterial->LoadNormalMap(normalPath);
+    texMaterial->LoadRoughnessMap(roughnessPath);
+
+    // Create material without texture
+    auto pureMaterial = std::make_shared<PBRMaterial>();
+    pureMaterial->SetBaseColor(glm::vec3(1.0f, 0.0f, 0.0f));   // 红色
+    pureMaterial->SetRoughness(0.2f);                           // 光滑表面
+    pureMaterial->SetMetalness(1.0f);                           // 纯金属
+    pureMaterial->SetAO(1.0f);                                  // 全环境光，无遮挡
+
+    // ==========Load HDR equirectangular==============
+    // TODO: Combine it iinto skybox class
+    std::string envMapPath = "assets/env.hdr";
+    unsigned int envSize = 2048;
+    auto envMap = std::make_shared<Cubemap>(envSize, 0);
+    envMap->LoadEquiToCubemap(envMapPath);
+
+    // Dispay generated cubemap
+    envMap->Bind(SKYBOX_TEXTURE_UNIT);
+    RunDebugLoop(window, envMap->GetTexture(), cube);
+    envMap->Unbind();
 
     // Clean
     glfwDestroyWindow(window);

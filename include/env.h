@@ -4,7 +4,7 @@
 #include "shader.h"
 #include <iostream>
 
-// PBR environment 
+// PBR - irradiance map, prefilter map and BRDF LUT
 class Environment {
     public:
         Environment(const std::shared_ptr<Cubemap>& irradiance, 

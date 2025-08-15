@@ -3,7 +3,32 @@
 #include "shader.h"
 #include "config.h"
 #include <iostream>
+#include <glm/glm.hpp>
 
+
+PBRMaterial::PBRMaterial(): baseColor(glm::vec3(1.0f, 0.0f, 0.0f)), metalness(1.0f), roughness(0.5f), aoFactor(1.0f) {
+    // Set default fallback values for materia
+}
+
+void PBRMaterial::LoadAlbedoMap(const std::string& path) {
+    this->albedoMap = std::make_shared<Texture2D>();
+    this->albedoMap->LoadLDRToTexture(path);
+}
+
+void PBRMaterial::LoadMetalnessMap(const std::string& path) {
+    this->metalnessMap = std::make_shared<Texture2D>();
+    this->metalnessMap->LoadLDRToTexture(path);
+}
+
+void PBRMaterial::LoadRoughnessMap(const std::string& path) {
+    this->roughnessMap = std::make_shared<Texture2D>();
+    this->roughnessMap->LoadLDRToTexture(path);
+}
+
+void PBRMaterial::LoadNormalMap(const std::string& path) {
+    this->normalMap = std::make_shared<Texture2D>();
+    this->normalMap->LoadLDRToTexture(path);
+}
 
 void PBRMaterial::BindToShader(const std::shared_ptr<Shader>& shader) const {
     shader->Use();
@@ -12,7 +37,7 @@ void PBRMaterial::BindToShader(const std::shared_ptr<Shader>& shader) const {
     shader->SetUniform("useAlbedoMap",    albedoMap    ? 1 : 0);
     shader->SetUniform("useRoughnessMap", roughnessMap ? 1 : 0);
     shader->SetUniform("useMetalnessMap", metalnessMap ? 1 : 0);
-    shader->SetUniform("useNormalMap",    normalMap    ? 1 : 0);
+    //shader->SetUniform("useNormalMap",    normalMap    ? 1 : 0);
     shader->SetUniform("useAOMap",        aoMap        ? 1 : 0);
 
     // --- fallbacks (used when no texture is provided ) ---

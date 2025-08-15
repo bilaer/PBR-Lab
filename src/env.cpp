@@ -3,6 +3,7 @@
 #include "config.h"
 #include "cubemap/cubemap.h"
 
+ 
 Environment::Environment(
     const std::shared_ptr<Cubemap>& irradiance, 
     const std::shared_ptr<Cubemap>& prefilter, 
@@ -56,6 +57,7 @@ void Environment::UploadToShader(const std::shared_ptr<Shader>& shader) {
 
     this->prefilter->Bind(PREFILTER_TEXTURE_UNIT);
     shader->SetUniform("prefilterMap", PREFILTER_TEXTURE_UNIT);
+    shader->SetUniform("mipLevels", static_cast<float>(this->prefilter->GetMipLevels()));
 
     this->brdflut->Bind(BRDFLUT_TEXTURE_UNIT);
     shader->SetUniform("brdflut", BRDFLUT_TEXTURE_UNIT);

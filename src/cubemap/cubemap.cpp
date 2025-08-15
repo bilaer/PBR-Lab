@@ -1,21 +1,27 @@
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
 #include "cubemap/cubemap.h"
 #include "stb_image.h"
 #include "stb_image_write.h"
+#include "texture/texture.h"
 #include <string>
 #include <vector>
 #include <cmath>
 #include <filesystem>
-#include <unordered_map>
-#include <array> 
-#include <algorithm> 
 #include <gli/gli.hpp>
 #include <gli/load_ktx.hpp>
+#include "config.h"
 namespace fs = std::filesystem;
 
-// Initialize an empty cubemap
-Cubemap::Cubemap(unsigned int size, int mipLevels): size(size), mipLevels(mipLevels) {
-    this->totalMipLevels = static_cast<int>(std::floor(std::log2(this->size))) + 1;
-    this->InitializeCubemap();
+// Create HDR format by default
+Cubemap::Cubemap(unsigned int size, int mipLevels): 
+    size(size), 
+    mipLevels(mipLevels),
+    internalFormat(GL_RGB32F),
+    format(GL_RGB),
+    type(GL_FLOAT) {
+        this->totalMipLevels = static_cast<int>(std::floor(std::log2(this->size))) + 1;
+        this->InitializeCubemap();
 }
 
 // Load KTX texture file into cubemap
@@ -83,7 +89,7 @@ void Cubemap::LoadKTXToCubemap(const std::string& path) {
 
     glBindTexture(target, 0);
 
-    std::cout << "Successfully loaded KTX cubemap: " << path
+    std::cout << "[Cubemap] Successfully loaded KTX cubemap: " << path
               << " (levels=" << tex.levels() << ")\n";
 }
 
@@ -132,5 +138,99 @@ void Cubemap::InitializeCubemap() {
 
     glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
     
+}
+
+// Load and convert equirectangular HDR image to cubemap
+void Cubemap::LoadEquiToCubemap(const std::string& path) {
+    // Create 2d texture and loaded with equirectanguar image
+    auto envTexture2D = std::make_shared<Texture2D>(this->size, this->size, this->internalFormat, this->format, this->type);
+    envTexture2D->LoadHDRToTexture(path);
+
+    // Check if texture is loaded successfully
+    if (envTexture2D->GetTexture() == 0) {
+        std::cerr << "❌ Texture loading failed. Cannot proceed with cubemap generation.\n";
+        return;
+    }
+
+    // Create unit cube for drawing cubemap
+    auto cube = std::make_shared<UnitCube>();
+
+    // Create FBO + RBO
+    GLuint fbo, rbo;
+    glGenFramebuffers(1, &fbo);
+    glGenRenderbuffers(1, &rbo);
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo); // Bind to FBO
+    glBindRenderbuffer(GL_RENDERBUFFER, rbo);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, this->size, this->size);
+    glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, rbo);
+
+    // Camera parameters for sampling 6 faces of cubemap
+    glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 0.0f);
+    glm::vec3 cameraFront[6] = {
+        glm::vec3( 1.0f,  0.0f,  0.0f),
+        glm::vec3(-1.0f,  0.0f,  0.0f),
+        glm::vec3( 0.0f,  1.0f,  0.0f),
+        glm::vec3( 0.0f, -1.0f,  0.0f),
+        glm::vec3( 0.0f,  0.0f,  1.0f),
+        glm::vec3( 0.0f,  0.0f, -1.0f)
+    };
+
+    glm::vec3 cameraUp[6] = {
+        glm::vec3(0.0f, -1.0f,  0.0f),
+        glm::vec3(0.0f, -1.0f,  0.0f),
+        glm::vec3(0.0f,  0.0f,  1.0f),
+        glm::vec3(0.0f,  0.0f, -1.0f),
+        glm::vec3(0.0f, -1.0f,  0.0f),
+        glm::vec3(0.0f, -1.0f,  0.0f)
+    };
+
+    glm::mat4 projection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
+
+    // ==================Create Equirect → cubemap=======================
+    auto equiShader = std::make_shared<Shader>("shader/equi.vert", "shader/equi.frag");
+    equiShader->Use();
+    equiShader->SetUniform("envEqui", 0); 
+
+    envTexture2D->Bind(DEFAULT_TEXTURE_UNIT); // bind
+
+    glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+    GLint prevViewport[4];
+    glGetIntegerv(GL_VIEWPORT, prevViewport); // Save the current viewport setting for reseting later
+    glViewport(0, 0, this->size, this->size); // Adjust the viewport to sample cubemap
+    for (int face = 0; face < 6; ++face) {
+        // attach face
+        glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+                            GL_TEXTURE_CUBE_MAP_POSITIVE_X + face, this->cubemap, 0);
+        // Setup draw buffer
+        GLenum drawBuffers[1] = { GL_COLOR_ATTACHMENT0 };
+        glDrawBuffers(1, drawBuffers);
+
+        // Check framebuffer status
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+            std::cerr << "❌ Framebuffer not complete at face " << face << std::endl;
+        }
+
+        // Clear 
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+        // Upload view and projection matrix to shader
+        glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront[face], cameraUp[face]);
+        equiShader->SetUniform("view", view);
+        equiShader->SetUniform("projection", projection);
+
+        // 6️draw
+        cube->Draw(equiShader);
+    }
+    glBindFramebuffer(GL_FRAMEBUFFER, 0); // unbind fbo
+
+    // Release resources
+    cube.reset();
+    equiShader.reset();
+    glDeleteRenderbuffers(1, &rbo);
+    glDeleteFramebuffers(1, &fbo);
+
+    // Reset the viewport size
+    glViewport(prevViewport[0], prevViewport[1], prevViewport[2], prevViewport[3]);
 }
 

@@ -17,6 +17,16 @@ Texture2D::Texture2D(unsigned int width, unsigned int height, GLenum internalFor
     type(type) {
 
     glGenTextures(1, &this->texture2d);
+    if (this->texture2d == 0) {
+        std::cerr << "❌ Failed to generate texture!" << std::endl;
+    }
+}
+
+Texture2D::Texture2D() {
+    glGenTextures(1, &this->texture2d);
+    if (this->texture2d == 0) {
+        std::cerr << "❌ Failed to generate texture!" << std::endl;
+    }
 }
 
 Texture2D::~Texture2D() {
@@ -35,8 +45,8 @@ void Texture2D::Unbind() {
 }
 
 // Load hdr file to 2d texture
-void Texture2D::LoadHDRToTexture(const std::string& path) {
-    //stbi_set_flip_vertically_on_load(true);
+void Texture2D::LoadHDRToTexture(const std::string& path, bool flipY) {
+    stbi_set_flip_vertically_on_load(flipY);
 
     int w, h, comp; // comp: number of channels
     float* pixels = stbi_loadf(path.c_str(), &w, &h, &comp, 0);
@@ -54,23 +64,17 @@ void Texture2D::LoadHDRToTexture(const std::string& path) {
         case 4: extFormat = GL_RGBA; break;
         default: extFormat = format; break; 
     }
-    if (extFormat != format) {
-        // warning if format is not match
-        std::cerr << "[Texture2D] Notice: file channels=" << comp
-                  << ", using external format " << (int)extFormat
-                  << " (internal stays " << (int)internalFormat << ")\n";
-    }
+    // Set formats to match image format
+    this->format = extFormat;
 
     width  = static_cast<unsigned int>(w);
     height = static_cast<unsigned int>(h);
 
-    glBindTexture(GL_TEXTURE_2D, texture2d);
+    glBindTexture(GL_TEXTURE_2D, this->texture2d);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
     // Uplaod the image to texture
-    glTexImage2D(GL_TEXTURE_2D, 0,
-                 this->internalFormat, w, h, 0,
-                 extFormat, GL_FLOAT, pixels);
+    glTexImage2D(GL_TEXTURE_2D, 0, this->internalFormat, w, h, 0, this->format, GL_FLOAT, pixels);
 
     // Disable mipmaps by default, use CreateMipmaps and SetFilter if needed
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR); 
@@ -78,9 +82,17 @@ void Texture2D::LoadHDRToTexture(const std::string& path) {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
+    // Check if texture is uploaded successfully
+    if (glGetError() != GL_NO_ERROR) {
+        std::cerr << "[Texture2D] Error occurred during texture upload\n";
+    } else {
+        std::cout << "[Texture2D] successfully loaded HDR texture : " << path << "\n";
+    }
+
     // Free data
     stbi_image_free(pixels);
 }
+
 
 // Load texture from ktx file to texture2d
 void Texture2D::LoadKTXToTexture(const std::string& path) {
@@ -102,32 +114,33 @@ void Texture2D::LoadKTXToTexture(const std::string& path) {
     // Set internalFormat and format based on ktx texture format
     switch (tex.format()) {
         case gli::FORMAT_RGB32_SFLOAT_PACK32:
-            internalFormat = GL_RGB32F;
-            format = GL_RGB;
+            this->internalFormat = GL_RGB32F;
+            this->format = GL_RGB;
             break;
         case gli::FORMAT_RGBA32_SFLOAT_PACK32:
-            internalFormat = GL_RGBA32F;
-            format = GL_RGBA;
+            this->internalFormat = GL_RGBA32F;
+            this->format = GL_RGBA;
             break;
         case gli::FORMAT_RG32_SFLOAT_PACK32: // BRDF LUT
-            internalFormat = GL_RG32F;
-            format = GL_RG;
+            this->internalFormat = GL_RG32F;
+            this->format = GL_RG;
             break;
         case gli::FORMAT_RGB8_UNORM_PACK8:
-            internalFormat = GL_RGB8;
-            format = GL_RGB;
+            this->internalFormat = GL_RGB8;
+            this->format = GL_RGB;
             break;
         case gli::FORMAT_RGBA8_UNORM_PACK8:
-            internalFormat = GL_RGBA8;
-            format = GL_RGBA;
+            this->internalFormat = GL_RGBA8;
+            this->format = GL_RGBA;
             break;
         default:
             std::cerr << "[Texture2D] Unsupported KTX format, using default\n";
             break;
     }
 
+
     // Load texture
-    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, texSize.x, texSize.y, 0, format, GL_FLOAT, tex.data(0, 0, 0));
+    glTexImage2D(GL_TEXTURE_2D, 0, this->internalFormat, texSize.x, texSize.y, 0, this->format, GL_FLOAT, tex.data(0, 0, 0));
 
     // Set up texture parameters
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -139,8 +152,49 @@ void Texture2D::LoadKTXToTexture(const std::string& path) {
     if (glGetError() != GL_NO_ERROR) {
         std::cerr << "[Texture2D] Error occurred during texture upload\n";
     } else {
-        std::cout << "[Texture2D] KTX texture successfully loaded: " << path << "\n";
+        std::cout << "[Texture2D] successfully loaded KTX texture : " << path << "\n";
     }
+}
+
+// Load LDR (jpg, png...) to texture 2d
+void Texture2D::LoadLDRToTexture(const std::string& path, bool flipY) {
+    // Whether flip y axis, used when texture is upside down
+    stbi_set_flip_vertically_on_load(flipY);
+
+    int width, height, nrChannels;
+    unsigned char* data = stbi_load(path.c_str(), &width, &height, &nrChannels, 0);
+    if (!data) {
+        std::cerr << "❌ Failed to load texture: " << path << std::endl;
+    }
+
+    GLenum format;
+    if (nrChannels == 1) {
+        format = GL_RED;
+    } else if (nrChannels == 3) {
+        format = GL_RGB;
+    } else if (nrChannels == 4) {
+        format = GL_RGBA;
+    } else {
+        std::cerr << "⚠️ Unsupported channel count: " << nrChannels << std::endl;
+        stbi_image_free(data);
+    }
+
+    glBindTexture(GL_TEXTURE_2D, this->texture2d); // Bind texture
+
+    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    // Set formats to match image format
+    this->internalFormat = format;
+    this->format = format;
+
+    // Set paramters
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    stbi_image_free(data);
 }
 
 // Create empty 2d texture
@@ -171,5 +225,81 @@ void Texture2D::SetFilters(GLenum minFilter, GLenum magFilter) const {
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, magFilter);
     glBindTexture(GL_TEXTURE_2D, 0);
 }
+
+// Display texture 2D for debugging purpose
+void Texture2D::ShowTexture2D(GLFWwindow* sharedContext) {
+    // Window creation hints (affects only the next created window)
+    glfwWindowHint(GLFW_VISIBLE, GLFW_TRUE);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+
+    if (this->texture2d == 0) {
+        std::cerr << "❌ texture2d is 0. Abort debug viewer.\n";
+        return;
+    }
+
+    // Create a shared-context debug window
+    GLFWwindow* debugWindow = glfwCreateWindow(512, 512, "BRDF LUT Viewer", nullptr, sharedContext);
+    if (!debugWindow) {
+        std::cerr << "❌ Failed to create BRDF LUT Debug window!\n";
+        return;
+    }
+
+    glfwMakeContextCurrent(debugWindow);
+    glfwSwapInterval(1);  // Enable V-Sync
+
+    // Create shader and quad in the debug window's context
+    auto debugShader = std::make_shared<Shader>("shader/show_texture2d.vert",
+                                                "shader/show_texture2d.frag");
+    auto screenQuad  = std::make_shared<ScreenQuad>(); // Ensure VAO/VBO is created in the same context
+
+    // Initial viewport setup
+    int fbw, fbh;
+    glfwGetFramebufferSize(debugWindow, &fbw, &fbh);
+    glViewport(0, 0, fbw, fbh);
+
+    // Main Loop
+    while (!glfwWindowShouldClose(debugWindow)) {
+        if (glfwGetKey(debugWindow, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
+            glfwSetWindowShouldClose(debugWindow, true);
+        }
+
+        // Update viewport if the window size changes
+        int newW, newH;
+        glfwGetFramebufferSize(debugWindow, &newW, &newH);
+        if (newW != fbw || newH != fbh) {
+            fbw = newW; fbh = newH;
+            glViewport(0, 0, fbw, fbh);
+        }
+
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+
+        debugShader->Use();
+        debugShader->SetUniform("tex", 0);
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, this->texture2d);
+
+        screenQuad->Draw(debugShader);
+
+        glfwSwapBuffers(debugWindow);
+        glfwPollEvents();
+    }
+
+    // --- Make sure OpenGL resources are deleted while the context is still current ---
+    glUseProgram(0);
+    glBindTexture(GL_TEXTURE_2D, 0);
+
+    // Release GL resources created in this function
+    screenQuad.reset();   // If destructor calls glDelete*, it must happen in a valid context
+    debugShader.reset();  // Same here, ensures glDeleteProgram is called safely
+
+    // Optionally clear the current context before destroying the window
+    glfwMakeContextCurrent(nullptr);
+    glfwDestroyWindow(debugWindow);
+}
+
 
 
