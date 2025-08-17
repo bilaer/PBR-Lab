@@ -15,6 +15,7 @@
 #include "imgui/imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "model_loader.h"
 
 // ======== Camera state ========
 float lastX = 400, lastY = 300;
@@ -247,19 +248,23 @@ int main() {
 
     auto skyShader = std::make_shared<Shader>("shader/debug.vert", "shader/debug.frag");
 
-    // ========================Assemble BRDF======================
+    // ====================Assemble BRDF======================
     auto pbrShader = std::make_shared<Shader>("shader/pbr.vert", "shader/pbr.frag");
     pbrShader->Use(); 
 
     // upload irradiance, prefilter and brdf lut and material info to shader
     env.UploadToShader(pbrShader);
 
-    // Setup sphere and material
+    // ==================Setup material value =================
     auto sphere = std::make_shared<Sphere>(0.5f, 50, 50);
     float roughness = 0.0f; // Will be adjusted using imgui
     float metalness = 0.0f;  // Will be adjusted using imgui
+	// Albedo color
+	float R = 0.0;
+	float G = 0.0;
+	float B = 0.0;
 
-    // Initialize ImGui
+    // ================Initialize ImGui====================
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO(); (void)io;
@@ -267,6 +272,16 @@ int main() {
 	ImGui::StyleColorsDark();
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init("#version 330"); // Use Version 330 for OpenGL
+
+	//================Load Testing Model=====================
+	Mesh loadedModel;
+	std::string modelPath = "assets/models/happy_vrip.ply";
+    if (LoadPLYToMesh(modelPath, loadedModel)) {
+        std::cout << "PLY model loaded and transformed successfully!" << std::endl;
+    } else {
+        std::cerr << "Failed to load and transform PLY model." << std::endl;
+        return -1;  // Exit if loading fails
+    }
 
     glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
     // ==================== Main Render Loop ===================
@@ -321,7 +336,7 @@ int main() {
         pbrShader->SetUniform("camPos", camPos);
 
         // Set Material
-        pbrShader->SetUniform("baseColor", glm::vec3(1.0f, 0.0f, 0.0f));  // Red Color
+        pbrShader->SetUniform("baseColor", glm::vec3(R, G, B));  // Red Color
         pbrShader->SetUniform("roughness", roughness);  // Controlled by ImGui
         pbrShader->SetUniform("metalness", metalness);  // Controlled by ImGui
         pbrShader->SetUniform("ao", 1.0f);  // Ambient Occlusion
@@ -333,17 +348,27 @@ int main() {
         glActiveTexture(GL_TEXTURE2);
         glBindTexture(GL_TEXTURE_2D, env.GetBRDFLUT());
 
-        sphere->Draw();  // Render sphere
+        loadedModel.Draw();
 
         // ================== Render ImGui UI =====================
 		ImGui::SetNextWindowSize(ImVec2(400, 200), ImGuiCond_Once);
 		ImGui::Begin("Material Settings", NULL, ImGuiWindowFlags_AlwaysAutoResize);
+		// Material setting
 		ImGui::SliderFloat("Roughness", &roughness, 0.0f, 1.0f, "%.3f",
 						ImGuiSliderFlags_NoInput);  // disable text input
 		ImGui::SliderFloat("Metalness", &metalness, 0.0f, 1.0f, "%.3f",
 						ImGuiSliderFlags_NoInput);
+		// Color setting
+		ImGui::SliderFloat("R", &R, 0.0f, 1.0f, "%.3f",
+				ImGuiSliderFlags_NoInput); 
+		ImGui::SliderFloat("G", &G, 0.0f, 1.0f, "%.3f",
+				ImGuiSliderFlags_NoInput);
+		ImGui::SliderFloat("B", &B, 0.0f, 1.0f, "%.3f",
+				ImGuiSliderFlags_NoInput);
+		// Color settting
 		ImGui::End(); 
-
+		
+		// Imgui Render
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
@@ -356,9 +381,9 @@ int main() {
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
-
     glfwDestroyWindow(window);
     glfwTerminate();
+
     return 0;
     
 }
