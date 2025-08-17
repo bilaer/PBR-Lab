@@ -33,7 +33,7 @@ class PBRMaterial {
         std::shared_ptr<Texture2D> GetMetalnessMap() const { return this->metalnessMap; };
         std::shared_ptr<Texture2D> GetAOMap() const { return this->aoMap; };
         // Upload all the texture/parameters to shader
-        void BindToShader(const std::shared_ptr<Shader>& shader) const;
+        void UploadToShader(const std::shared_ptr<Shader>& shader) const;
     private:
         std::shared_ptr<Texture2D> albedoMap        = nullptr;
         std::shared_ptr<Texture2D> roughnessMap     = nullptr;

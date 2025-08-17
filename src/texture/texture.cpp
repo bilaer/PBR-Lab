@@ -282,7 +282,7 @@ void Texture2D::ShowTexture2D(GLFWwindow* sharedContext) {
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, this->texture2d);
 
-        screenQuad->Draw(debugShader);
+        screenQuad->Draw();
 
         glfwSwapBuffers(debugWindow);
         glfwPollEvents();

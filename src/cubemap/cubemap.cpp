@@ -13,6 +13,15 @@
 #include "config.h"
 namespace fs = std::filesystem;
 
+Cubemap::Cubemap():
+    cubemap(0),
+    mipLevels(0),
+    internalFormat(GL_RGB32F),
+    format(GL_RGB),
+    type(GL_FLOAT) {
+
+}
+
 // Create HDR format by default
 Cubemap::Cubemap(unsigned int size, int mipLevels): 
     size(size), 
@@ -218,9 +227,8 @@ void Cubemap::LoadEquiToCubemap(const std::string& path) {
         glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront[face], cameraUp[face]);
         equiShader->SetUniform("view", view);
         equiShader->SetUniform("projection", projection);
-
-        // 6️draw
-        cube->Draw(equiShader);
+        
+        cube->Draw();
     }
     glBindFramebuffer(GL_FRAMEBUFFER, 0); // unbind fbo
 

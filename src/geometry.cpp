@@ -13,8 +13,7 @@ Geometry::~Geometry() {
     glDeleteBuffers(1, &this->VBO);
 }
 
-void Geometry::Draw(const std::shared_ptr<Shader>& shader) {
-    shader->Use();
+void Geometry::Draw() {
     glBindVertexArray(this->VAO);
     glDrawArrays(GL_TRIANGLES, 0, static_cast<int>(this->vertices.size() / 3));
     glBindVertexArray(0);
@@ -121,7 +120,6 @@ Mesh::Mesh():
     EBO(0) {
 }
 
-
 Mesh::~Mesh() {
     // Check if buffers are generated before deleting to avoid invalid OpenGL calls.
     if (VBO) glDeleteBuffers(1, &VBO);
@@ -129,6 +127,7 @@ Mesh::~Mesh() {
     if (EBO) glDeleteBuffers(1, &EBO);
 }
 
+// Used by derived class to procedurally generate vertices, indices and normal data
 void Mesh::Init() {
     if (this->initialized) return; // Make sure don't repeatedly initialize buffers
 
@@ -142,6 +141,14 @@ void Mesh::Init() {
     this->initialized = true;
 }
 
+// API for model loader to bypass tangent/bitangent calculation
+void Mesh::LoadFromModel(std::vector<Vertex> vertices, std::vector<unsigned int> indices) {
+    this->vertices = vertices;
+    this->indices = indices;
+    this->SetupBuffers();
+}
+
+// Initialize VAO, VBO and EBO, enable location in shader
 void Mesh::SetupBuffers() {
     glGenVertexArrays(1, &this->VAO);
     glGenBuffers(1, &this->VBO);
@@ -205,6 +212,7 @@ glm::vec3 Mesh::CalBitangent(const glm::vec2& deltaUV1, const glm::vec2& deltaUV
 }
 
 
+// Draw the mesh
 void Mesh::Draw(){
     glBindVertexArray(this->VAO);
     glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(this->indices.size()), GL_UNSIGNED_INT, 0);

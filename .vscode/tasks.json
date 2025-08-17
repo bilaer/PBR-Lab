@@ -14,18 +14,28 @@
         "src/shader.cpp",
         "src/env.cpp",
         "src/geometry.cpp",
+        "src/model_loader.cpp",
         "src/cubemap/skybox.cpp",
         "src/camera/camera.cpp",
         "src/cubemap/cubemap.cpp",
         "src/texture/texture.cpp",
+        "src/imgui/imgui.cpp",
+        "src/imgui/imgui_draw.cpp",
+        "src/imgui/imgui_tables.cpp",
+        "src/imgui/imgui_widgets.cpp",
+        "src/imgui/backends/imgui_impl_opengl3.cpp",
+        "src/imgui/backends/imgui_impl_glfw.cpp",
         "src/material.cpp",
         "src/camera.cpp",
         "build/glad.o",
         "-o", "opengl_app",
 
         // include paths
-        "-I${workspaceFolder}/include",
+        "-I${workspaceFolder}/include",          // Main include folder
+        "-I${workspaceFolder}/include/imgui",    // Include path for ImGui
+        "-I${workspaceFolder}/include/imgui/backends",    // Include path for ImGui backends
         "-I./include/gli",
+        "-I./include/backends",
 
         // library paths
         "-L./lib",

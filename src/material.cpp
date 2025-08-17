@@ -30,7 +30,7 @@ void PBRMaterial::LoadNormalMap(const std::string& path) {
     this->normalMap->LoadLDRToTexture(path);
 }
 
-void PBRMaterial::BindToShader(const std::shared_ptr<Shader>& shader) const {
+void PBRMaterial::UploadToShader(const std::shared_ptr<Shader>& shader) const {
     shader->Use();
 
     // --- If use texture ---

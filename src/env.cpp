@@ -40,7 +40,6 @@ void Environment::LoadIrradianceMap(const std::string& irradiancePath, unsigned 
 void Environment::LoadPrefilterMap(const std::string& prefilterPath, unsigned int size, unsigned int mipLevels) {
     this->prefilter = std::make_shared<Cubemap>(size, mipLevels);
     this->prefilter->LoadKTXToCubemap(prefilterPath);
-
 }
 
 // Load BRDF LUT from ktx file
@@ -52,14 +51,16 @@ void Environment::LoadBRDFLut(const std::string& brdflutPath, unsigned int size)
 void Environment::UploadToShader(const std::shared_ptr<Shader>& shader) {
     shader->Use();
 
-    this->irradiance->Bind(IRRADIANCE_TEXTURE_UNIT);
+    // Bind irradiance texture
     shader->SetUniform("irradianceMap", IRRADIANCE_TEXTURE_UNIT);
+    this->irradiance->Bind(IRRADIANCE_TEXTURE_UNIT);
 
-    this->prefilter->Bind(PREFILTER_TEXTURE_UNIT);
+    // Bind prefilter texture
     shader->SetUniform("prefilterMap", PREFILTER_TEXTURE_UNIT);
+    this->prefilter->Bind(PREFILTER_TEXTURE_UNIT);    
     shader->SetUniform("mipLevels", static_cast<float>(this->prefilter->GetMipLevels()));
 
-    this->brdflut->Bind(BRDFLUT_TEXTURE_UNIT);
+    // Bind BRDF LUT texture
     shader->SetUniform("brdflut", BRDFLUT_TEXTURE_UNIT);
-
+    this->brdflut->Bind(BRDFLUT_TEXTURE_UNIT);
 }

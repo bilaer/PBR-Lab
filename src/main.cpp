@@ -12,6 +12,9 @@
 #include "material.h"
 #include "config.h"
 #include <glm/glm.hpp>
+#include "imgui/imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
 
 // ======== Camera state ========
 float lastX = 400, lastY = 300;
@@ -20,7 +23,7 @@ float pitch = 0.0f;
 float fov = 45.0f;
 bool firstMouse = true;
 
-glm::vec3 camPos(0.0f, 0.0f, 0.0f);
+glm::vec3 camPos(0.0f, 0.0f, 3.0f);
 glm::vec3 camFront(0.0f, 0.0f, -1.0f);
 glm::vec3 camUp(0.0f, 1.0f, 0.0f);
 
@@ -63,6 +66,7 @@ static void ProcessInput(GLFWwindow* window) {
 // ======== Window + GL init (one place) ========
 GLFWwindow* CreateWindowAndContext(int winW, int winH, const char* title) {
     if (!glfwInit()) { std::cerr << "Failed to initialize GLFW\n"; return nullptr; }
+	// Use Version 3.3 for OpenGL
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -127,7 +131,7 @@ void ShowBRDFLUTDebugWindow(GLuint brdfLUT, GLFWwindow* sharedContext, const std
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, brdfLUT);
 
-        screenQuad->Draw(debugShader);
+        screenQuad->Draw();
 
         glfwSwapBuffers(debugWindow);
         glfwPollEvents();
@@ -170,7 +174,7 @@ void RunDebugLoop(GLFWwindow* window, GLuint cubemap, const std::shared_ptr<Unit
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_CUBE_MAP, cubemap);
 
-        cube->Draw(shader);
+        cube->Draw();
 
         glDepthMask(GL_TRUE);
         glDepthFunc(GL_LESS);
@@ -214,12 +218,12 @@ int main() {
     //RunDebugLoop(window, env.GetPrefilter(), cube);
 
     // ==============Load texture for PBR material===================
-    std::string roughnessPath = "assets/test/roughness.jpg";
-    std::string metalPath = "assets/test/metal.jpg";
-    std::string normalPath = "assets/test/normal.png";
-    std::string albedoPath = "assets/test/color.jpg";
+    std::string roughnessPath = "assets/material/roughness.jpg";
+    std::string metalPath = "assets/material/metal.jpg";
+    std::string normalPath = "assets/material/normal.png";
+    std::string albedoPath = "assets/material/color.jpg";
     
-    // Create material with texture
+    // Create material with textures
     auto texMaterial = std::make_shared<PBRMaterial>();
     texMaterial->LoadAlbedoMap(albedoPath);
     texMaterial->LoadMetalnessMap(metalPath);
@@ -232,6 +236,7 @@ int main() {
     pureMaterial->SetRoughness(0.2f);                           // 光滑表面
     pureMaterial->SetMetalness(1.0f);                           // 纯金属
     pureMaterial->SetAO(1.0f);                                  // 全环境光，无遮挡
+    //=================================================
 
     // ==========Load HDR equirectangular==============
     // TODO: Combine it iinto skybox class
@@ -240,13 +245,120 @@ int main() {
     auto envMap = std::make_shared<Cubemap>(envSize, 0);
     envMap->LoadEquiToCubemap(envMapPath);
 
-    // Dispay generated cubemap
-    envMap->Bind(SKYBOX_TEXTURE_UNIT);
-    RunDebugLoop(window, envMap->GetTexture(), cube);
-    envMap->Unbind();
+    auto skyShader = std::make_shared<Shader>("shader/debug.vert", "shader/debug.frag");
 
-    // Clean
+    // ========================Assemble BRDF======================
+    auto pbrShader = std::make_shared<Shader>("shader/pbr.vert", "shader/pbr.frag");
+    pbrShader->Use(); 
+
+    // upload irradiance, prefilter and brdf lut and material info to shader
+    env.UploadToShader(pbrShader);
+
+    // Setup sphere and material
+    auto sphere = std::make_shared<Sphere>(0.5f, 50, 50);
+    float roughness = 0.0f; // Will be adjusted using imgui
+    float metalness = 0.0f;  // Will be adjusted using imgui
+
+    // Initialize ImGui
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable keyboard navigation
+	ImGui::StyleColorsDark();
+	ImGui_ImplGlfw_InitForOpenGL(window, true);
+	ImGui_ImplOpenGL3_Init("#version 330"); // Use Version 330 for OpenGL
+
+    glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+    // ==================== Main Render Loop ===================
+    while (!glfwWindowShouldClose(window)) {
+        ProcessInput(window);
+
+        int fbw = 0, fbh = 0;
+        glfwGetFramebufferSize(window, &fbw, &fbh);
+        if (fbw == 0 || fbh == 0) { glfwPollEvents(); continue; }
+        glViewport(0, 0, fbw, fbh);
+        const float aspect = (float)fbw / (float)fbh;
+
+        glClearColor(0.02f, 0.05f, 0.03f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		// Initialize imgui new frame
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
+
+        // ================== Camera matrix =======================
+        glm::mat4 model = glm::mat4(1.0f); 
+        const glm::mat4 view = glm::lookAt(camPos, camPos + camFront, camUp);
+        const glm::mat4 proj = glm::perspective(glm::radians(fov), aspect, 0.1f, 100.0f);
+
+        // =================== Render Skybox ====================
+        glDepthFunc(GL_LEQUAL); // Skybox depth test (depth is set to always be the farthest)
+        glDepthMask(GL_FALSE);  // Disable depth writes
+
+        skyShader->Use();
+        skyShader->SetUniform("view", glm::mat4(glm::mat3(view)));  // Remove translation for skybox
+        skyShader->SetUniform("projection", proj);
+        skyShader->SetUniform("cubemap", SKYBOX_TEXTURE_UNIT);
+
+        glActiveTexture(GL_TEXTURE0 + SKYBOX_TEXTURE_UNIT);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, envMap->GetTexture());
+
+        cube->Draw();  // Render skybox
+
+        glDepthMask(GL_TRUE);  // Enable depth writes
+        glDepthFunc(GL_LESS);  // Restore depth function
+
+        // ==================== Render Scene Objects (Sphere) =====================
+
+        pbrShader->Use();
+        pbrShader->SetUniform("irradianceMap", 0);
+        pbrShader->SetUniform("prefilterMap", 1);
+        pbrShader->SetUniform("brdflut", 2);
+        pbrShader->SetUniform("model", model);
+        pbrShader->SetUniform("view", view);
+        pbrShader->SetUniform("projection", proj);
+        pbrShader->SetUniform("camPos", camPos);
+
+        // Set Material
+        pbrShader->SetUniform("baseColor", glm::vec3(1.0f, 0.0f, 0.0f));  // Red Color
+        pbrShader->SetUniform("roughness", roughness);  // Controlled by ImGui
+        pbrShader->SetUniform("metalness", metalness);  // Controlled by ImGui
+        pbrShader->SetUniform("ao", 1.0f);  // Ambient Occlusion
+
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, env.GetIrradiance());
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_CUBE_MAP, env.GetPrefilter());
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, env.GetBRDFLUT());
+
+        sphere->Draw();  // Render sphere
+
+        // ================== Render ImGui UI =====================
+		ImGui::SetNextWindowSize(ImVec2(400, 200), ImGuiCond_Once);
+		ImGui::Begin("Material Settings", NULL, ImGuiWindowFlags_AlwaysAutoResize);
+		ImGui::SliderFloat("Roughness", &roughness, 0.0f, 1.0f, "%.3f",
+						ImGuiSliderFlags_NoInput);  // disable text input
+		ImGui::SliderFloat("Metalness", &metalness, 0.0f, 1.0f, "%.3f",
+						ImGuiSliderFlags_NoInput);
+		ImGui::End(); 
+
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        // ==================== Swap Buffers =====================
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    }
+
+    // Clean up ImGui and OpenGL resources
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
+
     glfwDestroyWindow(window);
     glfwTerminate();
     return 0;
+    
 }

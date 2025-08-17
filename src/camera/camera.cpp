@@ -5,9 +5,9 @@
 
 
 Camera::Camera(float fov, float aspect, float near, float far):
-    // 摄像机初始化在原点
+    // Initialize camera at origin (0, 0, 0)
     cameraPosition(0.0f),
-    // 摄像机头顶朝上，
+    // Camera pointing up
     cameraUp(glm::vec3(0.0f, 1.0f, 0.0f)),
     yaw(glm::radians(90.0f)),// 初始朝向-z轴
     pitch(glm::radians(0.0f)),
@@ -17,7 +17,7 @@ Camera::Camera(float fov, float aspect, float near, float far):
     aspect(aspect), 
     near(near), 
     far(far) {
-        // 摄像机默认镜头朝向-z轴(往屏幕里看)
+        // pointing to -z axis
         this->UpdateCameraFront();
         this->UpdateViewMatrix();
         this->projection = glm::perspective(this->fov, this->aspect, this->near, this->far); 
@@ -58,7 +58,7 @@ void Camera::RotateCamera(float yawOffset, float pitchOffset, float rollOffset) 
     this->yaw += yawOffset;
     this->pitch += pitchOffset;
     this->roll += rollOffset;
-    // 限制镜头角度在合理范围
+    // clamp angle to a range
     this->ClampAngle();
     // 计算摄像机前向量
     this->UpdateCameraFront();

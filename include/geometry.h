@@ -4,14 +4,15 @@
 #include "shader.h"
 
 // ========================Gemoetry==========================
-// only contain basic VAO and VBO
+// Provide concise data strcture for storing baisc object for
+// drawing cubemap and quad for framebuffer drawing
 // No support for UV, tangent bitangent
 class Geometry {
     public: 
         Geometry();
         ~Geometry();
         virtual void SetupBuffers() = 0;
-        void Draw(const std::shared_ptr<Shader>& shader);
+        void Draw();
     protected:
         GLuint VAO;
         GLuint VBO;
@@ -33,8 +34,9 @@ class ScreenQuad: public Geometry {
 };
 
 
-// ==================Mesh=============================
-// Provide full support for UV, normal map calculation
+// ========================Mesh========================================
+// Provide more extensive support for UV, normal map for procedurally 
+// generated or loaded model
 struct Vertex {
     glm::vec3 position;
     glm::vec3 normals;
@@ -55,7 +57,6 @@ class Mesh {
         void SetVAO(const unsigned int VAO) { this->VAO = VAO; };
         void SetEBO(const unsigned int EBO) { this->EBO = EBO; };
 
-        // 获取vertices和indices和为为vertices和indices赋值
         const std::vector<struct Vertex>& GetVertices() const { return this->vertices; };
         const std::vector<unsigned int>& GetIndices() const { return this->indices; };
         void SetVertices(std::vector<struct Vertex> vertices) { this->vertices = vertices; };
@@ -66,6 +67,9 @@ class Mesh {
         // Initialize VBO VAO and EBO buffers based on vertices and indices data 
         void SetupBuffers();
 
+        // API for model loader to bypass tangent/bitangent calculation
+        void LoadFromModel(std::vector<Vertex> vertices, std::vector<unsigned int> indices);
+        
     protected:
         bool initialized;
 

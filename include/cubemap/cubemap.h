@@ -10,6 +10,7 @@
 // internal format: GL_RGB32F;
 class Cubemap {
     public:
+        Cubemap();
         Cubemap(unsigned int size, int mipLevels); // Create empty cubemap
         void LoadKTXToCubemap(const std::string& path); // Load ktx file into cubemap texture
         void LoadEquiToCubemap(const std::string& path); // Load and convert hdr equirectangular image to cubemap.
@@ -19,7 +20,7 @@ class Cubemap {
         GLuint GetTexture() const { return this->cubemap; };
         int GetMipLevels() const { return this->mipLevels; };
     protected:
-        GLuint cubemap;
+        GLuint cubemap = 0;
         GLenum internalFormat;
         GLenum format;
         GLenum type;

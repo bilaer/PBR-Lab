@@ -8,10 +8,17 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
+// Initialize shared static resources
 std::shared_ptr<UnitCube> Skybox::cube = nullptr;
+std::shared_ptr<Shader> Skybox::skyboxShader = nullptr;
 
 Skybox::Skybox(const std::shared_ptr<Cubemap>& cubemap): cubemap(cubemap) {
 
+}
+
+Skybox::Skybox(const std::string& path) {
+    this->cubemap = std::make_shared<Cubemap>();
+    this->cubemap->LoadEquiToCubemap(path);
 }
 
 void Skybox::Draw(const std::shared_ptr<Shader>& shader, const std::shared_ptr<Camera>& camera) {
@@ -29,7 +36,7 @@ void Skybox::Draw(const std::shared_ptr<Shader>& shader, const std::shared_ptr<C
     shader->SetUniform("skybox", SKYBOX_TEXTURE_UNIT);
     this->cubemap->Bind(SKYBOX_TEXTURE_UNIT);
 
-    this->cube->Draw(shader);
+    this->cube->Draw();
 
     glDepthMask(GL_TRUE);
     glDepthFunc(GL_LESS);  // reset depth testing
