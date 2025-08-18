@@ -281,7 +281,7 @@ int main() {
 
     auto sphereNode = std::make_shared<SceneNode>(sphere, texMaterial);
     auto planeNode = std::make_shared<SceneNode>(plane, texMaterial);
-    auto loadedModelNode = std::make_shared<SceneNode>(std::make_shared<Mesh>(loadedModel), texMaterial);
+    auto loadedModelNode = std::make_shared<SceneNode>(std::make_shared<Mesh>(loadedModel), colorMaterial);
 
     // Add node to scene
     //scene->AddNode(sphereNode);
