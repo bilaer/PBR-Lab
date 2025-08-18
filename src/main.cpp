@@ -281,13 +281,13 @@ int main() {
 
     auto sphereNode = std::make_shared<SceneNode>(sphere, texMaterial);
     auto planeNode = std::make_shared<SceneNode>(plane, texMaterial);
-    //auto modelNode = std::make_shared<SceneNode>(loadedModel, colorMaterial);
+    auto loadedModelNode = std::make_shared<SceneNode>(std::make_shared<Mesh>(loadedModel), texMaterial);
 
     // Add node to scene
     //scene->AddNode(sphereNode);
     scene->AddNode(planeNode);
-    scene->AddNode(sphereNode);
-    
+    //scene->AddNode(sphereNode);
+    scene->AddNode(loadedModelNode);
 
     // ====================Upload env map======================
     auto pbrShader = std::make_shared<Shader>("shader/pbr_tex.vert", "shader/pbr_tex.frag"); // Init prb shader
