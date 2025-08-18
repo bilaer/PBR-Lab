@@ -1,85 +1,3 @@
-#include <iostream>
-
-#include "GL/glew.h"
-#include "GLFW/glfw3.h"
-#include "imgui.h"
-#include "backends/imgui_impl_glfw.h"
-#include "backends/imgui_impl_opengl3.h"
-
-static void helloWorld() {
-	ImGui::Begin("My DearImGui Window");
-	ImGui::Text("hello, world");
-	ImGui::End();
-}
-
-int main() {
-
-	// Setup window
-	glfwSetErrorCallback([](int error, const char* description) {
-		fprintf(stderr, "Glfw Error %d: %s\n", error, description);
-	});
-	glfwInit();
-
-	// GL 3.0 + GLSL 130
-	const char* glsl_version = "#version 150";
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
-
-	// Create window with graphics context
-	GLFWwindow* window = glfwCreateWindow(800, 600, "My GLFW Window", nullptr, nullptr);
-	glfwMakeContextCurrent(window);
-	glfwSwapInterval(1); // Enable vsync
-
-	// Initialize OpenGL loader
-	glewInit();
-
-	// Setup Dear ImGui context
-	IMGUI_CHECKVERSION();
-	ImGui::CreateContext();
-
-	// Setup Dear ImGui style
-	ImGui::StyleColorsDark();
-
-	// Setup Platform/Renderer bindings
-	ImGui_ImplGlfw_InitForOpenGL(window, true);
-	ImGui_ImplOpenGL3_Init(glsl_version);
-
-	// Main loop
-	int display_w, display_h;
-	glfwGetFramebufferSize(window, &display_w, &display_h);
-
-	while (!glfwWindowShouldClose(window)) {
-		// Poll and handle events (inputs, window resize, etc.)
-		glfwPollEvents();
-
-		// Start the Dear ImGui frame
-		ImGui_ImplOpenGL3_NewFrame();
-		ImGui_ImplGlfw_NewFrame();
-		ImGui::NewFrame();
-
-		// Run our Dear ImGui application
-		helloWorld();
-
-		// Rendering
-		ImGui::Render();
-		glfwGetFramebufferSize(window, &display_w, &display_h);
-		glViewport(0, 0, display_w, display_h);
-		glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
-		glClear(GL_COLOR_BUFFER_BIT);
-		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-		glfwSwapBuffers(window);
-	}
-
-	// Cleanup
-	ImGui_ImplOpenGL3_Shutdown();
-	ImGui_ImplGlfw_Shutdown();
-	ImGui::DestroyContext();
-
-	glfwDestroyWindow(window);
-	glfwTerminate();
-}
-=============================================================================================================
-
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include <iostream>
@@ -97,6 +15,7 @@ int main() {
 #include "imgui/imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "model_loader.h"
 
 // ======== Camera state ========
 float lastX = 400, lastY = 300;
@@ -148,6 +67,7 @@ static void ProcessInput(GLFWwindow* window) {
 // ======== Window + GL init (one place) ========
 GLFWwindow* CreateWindowAndContext(int winW, int winH, const char* title) {
     if (!glfwInit()) { std::cerr << "Failed to initialize GLFW\n"; return nullptr; }
+	// Use Version 3.3 for OpenGL
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
@@ -299,12 +219,15 @@ int main() {
     //RunDebugLoop(window, env.GetPrefilter(), cube);
 
     // ==============Load texture for PBR material===================
-    std::string roughnessPath = "assets/test/roughness.jpg";
-    std::string metalPath = "assets/test/metal.jpg";
-    std::string normalPath = "assets/test/normal.png";
-    std::string albedoPath = "assets/test/color.jpg";
+    std::string roughnessPath = "assets/material/roughness.jpg";
+    std::string metalPath = "assets/material/metal.jpg";
+    std::string normalPath = "assets/material/normal.png";
+    std::string albedoPath = "assets/material/color.jpg";
+
+	auto albedoMap = std::make_shared<Texture2D>();
+	albedoMap->LoadLDRToTexture(albedoPath);
     
-    // Create material with texture
+    // Create material with textures
     auto texMaterial = std::make_shared<PBRMaterial>();
     texMaterial->LoadAlbedoMap(albedoPath);
     texMaterial->LoadMetalnessMap(metalPath);
@@ -328,25 +251,44 @@ int main() {
 
     auto skyShader = std::make_shared<Shader>("shader/debug.vert", "shader/debug.frag");
 
-    // ========================Assemble BRDF======================
+    // ====================Assemble BRDF======================
     auto pbrShader = std::make_shared<Shader>("shader/pbr.vert", "shader/pbr.frag");
     pbrShader->Use(); 
 
     // upload irradiance, prefilter and brdf lut and material info to shader
     env.UploadToShader(pbrShader);
 
-    // Setup sphere and material
-    auto sphere = std::make_shared<Sphere>(0.5f, 50, 50);
+    // ==================Setup material value =================
     float roughness = 0.0f; // Will be adjusted using imgui
     float metalness = 0.0f;  // Will be adjusted using imgui
+	// Albedo color
+	float R = 0.0;
+	float G = 0.0;
+	float B = 0.0;
 
-    // Initialize ImGui
-    ImGui::CreateContext();
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplOpenGL3_Init("#version 130");
+    // ================Initialize ImGui====================
+	IMGUI_CHECKVERSION();
+	ImGui::CreateContext();
+	ImGuiIO& io = ImGui::GetIO(); (void)io;
+	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable keyboard navigation
+	ImGui::StyleColorsDark();
+	ImGui_ImplGlfw_InitForOpenGL(window, true);
+	ImGui_ImplOpenGL3_Init("#version 330"); // Use Version 330 for OpenGL
+
+	//================Load Testing Model=====================
+	// Load complex ply model
+	Mesh loadedModel;
+	std::string modelPath = "assets/models/dragon_vrip.ply";
+    if (LoadPLYToMesh(modelPath, loadedModel)) {
+        std::cout << "PLY model loaded and transformed successfully!" << std::endl;
+    } else {
+        std::cerr << "Failed to load and transform PLY model." << std::endl;
+        return -1;  // Exit if loading fails
+    }
+	// Sphere for simple material map testing
+	auto sphere = std::make_shared<Sphere>(0.5f, 50, 50);
 
     glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
-
     // ==================== Main Render Loop ===================
     while (!glfwWindowShouldClose(window)) {
         ProcessInput(window);
@@ -355,11 +297,15 @@ int main() {
         glfwGetFramebufferSize(window, &fbw, &fbh);
         if (fbw == 0 || fbh == 0) { glfwPollEvents(); continue; }
         glViewport(0, 0, fbw, fbh);
-        ImGui::GetIO().DisplaySize = ImVec2((float)fbw, (float)fbh);  // Update imgui viewport size
         const float aspect = (float)fbw / (float)fbh;
 
         glClearColor(0.02f, 0.05f, 0.03f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		// Initialize imgui new frame
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplGlfw_NewFrame();
+		ImGui::NewFrame();
 
         // ================== Camera matrix =======================
         glm::mat4 model = glm::mat4(1.0f); 
@@ -384,45 +330,46 @@ int main() {
         glDepthFunc(GL_LESS);  // Restore depth function
 
         // ==================== Render Scene Objects (Sphere) =====================
-
         pbrShader->Use();
-        pbrShader->SetUniform("irradianceMap", 0);
-        pbrShader->SetUniform("prefilterMap", 1);
-        pbrShader->SetUniform("brdflut", 2);
+		env.UploadToShader(pbrShader);
         pbrShader->SetUniform("model", model);
         pbrShader->SetUniform("view", view);
         pbrShader->SetUniform("projection", proj);
         pbrShader->SetUniform("camPos", camPos);
 
-        // Set Material
-        pbrShader->SetUniform("baseColor", glm::vec3(1.0f, 0.0f, 0.0f));  // Red Color
+        // Set material
+        pbrShader->SetUniform("baseColor", glm::vec3(R, G, B));  // Red Color
+		//pbrShader->SetUniform("albedoMap", ALBEDO_TEXTURE_UNIT);
         pbrShader->SetUniform("roughness", roughness);  // Controlled by ImGui
         pbrShader->SetUniform("metalness", metalness);  // Controlled by ImGui
         pbrShader->SetUniform("ao", 1.0f);  // Ambient Occlusion
 
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, env.GetIrradiance());
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, env.GetPrefilter());
-        glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D, env.GetBRDFLUT());
+		//glActiveTexture(GL_TEXTURE0 + ALBEDO_TEXTURE_UNIT);
+        //glBindTexture(GL_TEXTURE_2D, albedoMap->GetTexture());
 
-        sphere->Draw();  // Render sphere
+        sphere->Draw();
 
         // ================== Render ImGui UI =====================
-
-        ImGui::NewFrame();  // Start new ImGui frame
-
-        ImGui::Text("Debug ImGui rendering...");
-
-        ImGui::Begin("Material Settings");
-        ImGui::SliderFloat("Roughness", &roughness, 0.0f, 1.0f);
-        ImGui::SliderFloat("Metalness", &metalness, 0.0f, 1.0f);
-        ImGui::Text("Roughness: %.3f, Metalness: %.3f", roughness, metalness);
-        ImGui::End();
-
-        ImGui::Render();  // Render ImGui content
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+		ImGui::SetNextWindowSize(ImVec2(400, 200), ImGuiCond_Once);
+		ImGui::Begin("Material Settings", NULL, ImGuiWindowFlags_AlwaysAutoResize);
+		// Material setting
+		ImGui::SliderFloat("Roughness", &roughness, 0.0f, 1.0f, "%.3f",
+						ImGuiSliderFlags_NoInput);  // disable text input
+		ImGui::SliderFloat("Metalness", &metalness, 0.0f, 1.0f, "%.3f",
+						ImGuiSliderFlags_NoInput);
+		// Color setting
+		ImGui::SliderFloat("R", &R, 0.0f, 1.0f, "%.3f",
+				ImGuiSliderFlags_NoInput); 
+		ImGui::SliderFloat("G", &G, 0.0f, 1.0f, "%.3f",
+				ImGuiSliderFlags_NoInput);
+		ImGui::SliderFloat("B", &B, 0.0f, 1.0f, "%.3f",
+				ImGuiSliderFlags_NoInput);
+		// Color settting
+		ImGui::End(); 
+		
+		// Imgui Render
+		ImGui::Render();
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
         // ==================== Swap Buffers =====================
         glfwSwapBuffers(window);
@@ -430,12 +377,12 @@ int main() {
     }
 
     // Clean up ImGui and OpenGL resources
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
-
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplGlfw_Shutdown();
+	ImGui::DestroyContext();
     glfwDestroyWindow(window);
     glfwTerminate();
+
     return 0;
     
 }

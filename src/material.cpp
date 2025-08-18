@@ -12,22 +12,22 @@ PBRMaterial::PBRMaterial(): baseColor(glm::vec3(1.0f, 0.0f, 0.0f)), metalness(1.
 
 void PBRMaterial::LoadAlbedoMap(const std::string& path) {
     this->albedoMap = std::make_shared<Texture2D>();
-    this->albedoMap->LoadLDRToTexture(path);
+    this->albedoMap->LoadLDRToTexture(path, true);
 }
 
 void PBRMaterial::LoadMetalnessMap(const std::string& path) {
     this->metalnessMap = std::make_shared<Texture2D>();
-    this->metalnessMap->LoadLDRToTexture(path);
+    this->metalnessMap->LoadLDRToTexture(path, false);
 }
 
 void PBRMaterial::LoadRoughnessMap(const std::string& path) {
     this->roughnessMap = std::make_shared<Texture2D>();
-    this->roughnessMap->LoadLDRToTexture(path);
+    this->roughnessMap->LoadLDRToTexture(path, false);
 }
 
 void PBRMaterial::LoadNormalMap(const std::string& path) {
     this->normalMap = std::make_shared<Texture2D>();
-    this->normalMap->LoadLDRToTexture(path);
+    this->normalMap->LoadLDRToTexture(path, false);
 }
 
 void PBRMaterial::UploadToShader(const std::shared_ptr<Shader>& shader) const {

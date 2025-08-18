@@ -105,7 +105,7 @@ void Cubemap::LoadKTXToCubemap(const std::string& path) {
 
 void Cubemap::Bind(GLuint unit) {
     glActiveTexture(GL_TEXTURE0 + unit);
-    glBindTexture(GL_TEXTURE_2D, this->cubemap);
+    glBindTexture(GL_TEXTURE_CUBE_MAP, this->cubemap);
 }
 
 void Cubemap::Unbind() {

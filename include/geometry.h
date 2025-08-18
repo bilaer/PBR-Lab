@@ -79,20 +79,15 @@ class Mesh {
         unsigned int VBO = 0;
         unsigned int VAO = 0;
         unsigned int EBO = 0;
- 
-        // Calculate Tangent and Bitangent vector for normal map 
-        glm::vec3 CalTangent(const glm::vec2& deltaUV1, const glm::vec2& deltaUV2, const glm::vec3& p1, const glm::vec3& p2);
-        glm::vec3 CalBitangent(const glm::vec2& deltaUV1, const glm::vec2& deltaUV2, const glm::vec3& p1, const glm::vec3& p2);
-        // Generate tangent and bitangent for normal map
-        virtual void GenerateTBN() {};
+
         virtual void GenerateVertices() {};
         virtual void GenerateIndices() {};
 };
 
-/**
- * Sphere
- * Represents a 3D sphere mesh with configurable radius, stack, and slice count.
- * 
+//========================================
+//               Sphere
+//========================================
+/*
  * Vertex and index generation is based on:
  * https://www.songho.ca/opengl/gl_sphere.html
  */
@@ -122,7 +117,25 @@ class Sphere: public Mesh
          * Algorithm reference: https://www.songho.ca/opengl/gl_sphere.html
          */
         virtual void GenerateIndices() override;
-        virtual void GenerateTBN() override;
+
+};
+
+//========================================
+//              Plane
+//========================================
+
+class Plane: public Mesh
+{
+    public:
+        Plane(float size);
+        float GetSize() { return this->size; };
+        void SetSize(float size) { this->size = size; };
+
+        virtual void GenerateVertices() override;
+        virtual void GenerateIndices() override;
+    private:
+        float size;
+    
 };
 
 

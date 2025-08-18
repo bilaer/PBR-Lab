@@ -221,15 +221,27 @@ int main() {
     // ==============Load texture for PBR material===================
     std::string roughnessPath = "assets/material/roughness.jpg";
     std::string metalPath = "assets/material/metal.jpg";
-    std::string normalPath = "assets/material/normal.png";
+    std::string normalPath = "assets/material/normal.jpg";
     std::string albedoPath = "assets/material/color.jpg";
-    
+	std::string aoPath = "assets/material/ao.jpg";
+
+	auto albedoMap = std::make_shared<Texture2D>();
+	albedoMap->LoadLDRToTexture(albedoPath, true);
+	auto roughnessMap = std::make_shared<Texture2D>();
+	roughnessMap->LoadLDRToTexture(roughnessPath, false);
+	auto metalnessMap = std::make_shared<Texture2D>();
+    metalnessMap->LoadLDRToTexture(metalPath, false);
+	auto normalMap = std::make_shared<Texture2D>();
+	normalMap->LoadLDRToTexture(normalPath, false);
+	auto aoMap = std::make_shared<Texture2D>();
+	aoMap->LoadLDRToTexture(aoPath, false);
+
     // Create material with textures
-    auto texMaterial = std::make_shared<PBRMaterial>();
+    /*auto texMaterial = std::make_shared<PBRMaterial>();
     texMaterial->LoadAlbedoMap(albedoPath);
     texMaterial->LoadMetalnessMap(metalPath);
     texMaterial->LoadNormalMap(normalPath);
-    texMaterial->LoadRoughnessMap(roughnessPath);
+    texMaterial->LoadRoughnessMap(roughnessPath);*/
 
     // Create material without texture
     auto pureMaterial = std::make_shared<PBRMaterial>();
@@ -249,14 +261,13 @@ int main() {
     auto skyShader = std::make_shared<Shader>("shader/debug.vert", "shader/debug.frag");
 
     // ====================Assemble BRDF======================
-    auto pbrShader = std::make_shared<Shader>("shader/pbr.vert", "shader/pbr.frag");
+    auto pbrShader = std::make_shared<Shader>("shader/pbr_tex.vert", "shader/pbr_tex.frag"); // Init prb shader
     pbrShader->Use(); 
 
     // upload irradiance, prefilter and brdf lut and material info to shader
     env.UploadToShader(pbrShader);
 
     // ==================Setup material value =================
-    auto sphere = std::make_shared<Sphere>(0.5f, 50, 50);
     float roughness = 0.0f; // Will be adjusted using imgui
     float metalness = 0.0f;  // Will be adjusted using imgui
 	// Albedo color
@@ -265,23 +276,28 @@ int main() {
 	float B = 0.0;
 
     // ================Initialize ImGui====================
-	IMGUI_CHECKVERSION();
+	/*IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO(); (void)io;
 	io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable keyboard navigation
 	ImGui::StyleColorsDark();
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init("#version 330"); // Use Version 330 for OpenGL
+	*/
 
-	//================Load Testing Model=====================
+	//================Load Testing Model/objects=====================
+	// Load complex ply model
 	Mesh loadedModel;
-	std::string modelPath = "assets/models/happy_vrip.ply";
+	std::string modelPath = "assets/models/bun_zipper.ply";
     if (LoadPLYToMesh(modelPath, loadedModel)) {
         std::cout << "PLY model loaded and transformed successfully!" << std::endl;
     } else {
         std::cerr << "Failed to load and transform PLY model." << std::endl;
         return -1;  // Exit if loading fails
     }
+	// Sphere for simple material map testing
+	auto sphere = std::make_shared<Sphere>(0.5f, 50, 50);
+	auto plane = std::make_shared<Plane>(2.0f);
 
     glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
     // ==================== Main Render Loop ===================
@@ -298,9 +314,9 @@ int main() {
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// Initialize imgui new frame
-		ImGui_ImplOpenGL3_NewFrame();
+		/*ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
-		ImGui::NewFrame();
+		ImGui::NewFrame();*/
 
         // ================== Camera matrix =======================
         glm::mat4 model = glm::mat4(1.0f); 
@@ -325,33 +341,35 @@ int main() {
         glDepthFunc(GL_LESS);  // Restore depth function
 
         // ==================== Render Scene Objects (Sphere) =====================
-
         pbrShader->Use();
-        pbrShader->SetUniform("irradianceMap", 0);
-        pbrShader->SetUniform("prefilterMap", 1);
-        pbrShader->SetUniform("brdflut", 2);
+		env.UploadToShader(pbrShader);
         pbrShader->SetUniform("model", model);
         pbrShader->SetUniform("view", view);
         pbrShader->SetUniform("projection", proj);
         pbrShader->SetUniform("camPos", camPos);
 
-        // Set Material
-        pbrShader->SetUniform("baseColor", glm::vec3(R, G, B));  // Red Color
-        pbrShader->SetUniform("roughness", roughness);  // Controlled by ImGui
-        pbrShader->SetUniform("metalness", metalness);  // Controlled by ImGui
-        pbrShader->SetUniform("ao", 1.0f);  // Ambient Occlusion
+        // Set material
+		pbrShader->SetUniform("albedoMap", ALBEDO_TEXTURE_UNIT);
+        pbrShader->SetUniform("roughnessMap", ROUGHNESS_TEXTURE_UNIT);  
+        //pbrShader->SetUniform("metalnessMap", METALNESS_TEXTURE_UNIT); 
+		pbrShader->SetUniform("normalMap", NORMAL_TEXTURE_UNIT); 
+		pbrShader->SetUniform("aoMap", AO_TEXTURE_UNIT);
 
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, env.GetIrradiance());
-        glActiveTexture(GL_TEXTURE1);
-        glBindTexture(GL_TEXTURE_CUBE_MAP, env.GetPrefilter());
-        glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D, env.GetBRDFLUT());
+		glActiveTexture(GL_TEXTURE0 + ALBEDO_TEXTURE_UNIT);
+        glBindTexture(GL_TEXTURE_2D, albedoMap->GetTexture());
+		glActiveTexture(GL_TEXTURE0 + ROUGHNESS_TEXTURE_UNIT);
+		glBindTexture(GL_TEXTURE_2D, roughnessMap->GetTexture());
+		//glActiveTexture(GL_TEXTURE0 + METALNESS_TEXTURE_UNIT);
+		//glBindTexture(GL_TEXTURE_2D, metalnessMap->GetTexture());
+		glActiveTexture(GL_TEXTURE0 + NORMAL_TEXTURE_UNIT);
+		glBindTexture(GL_TEXTURE_2D, normalMap->GetTexture());
+		glActiveTexture(GL_TEXTURE0 + AO_TEXTURE_UNIT);
+		glBindTexture(GL_TEXTURE_2D, aoMap->GetTexture());
 
-        loadedModel.Draw();
+    	plane->Draw();
 
         // ================== Render ImGui UI =====================
-		ImGui::SetNextWindowSize(ImVec2(400, 200), ImGuiCond_Once);
+		/*ImGui::SetNextWindowSize(ImVec2(400, 200), ImGuiCond_Once);
 		ImGui::Begin("Material Settings", NULL, ImGuiWindowFlags_AlwaysAutoResize);
 		// Material setting
 		ImGui::SliderFloat("Roughness", &roughness, 0.0f, 1.0f, "%.3f",
@@ -370,7 +388,7 @@ int main() {
 		
 		// Imgui Render
 		ImGui::Render();
-		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());*/
 
         // ==================== Swap Buffers =====================
         glfwSwapBuffers(window);
@@ -378,11 +396,11 @@ int main() {
     }
 
     // Clean up ImGui and OpenGL resources
-	ImGui_ImplOpenGL3_Shutdown();
+	/*ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
     glfwDestroyWindow(window);
-    glfwTerminate();
+    glfwTerminate();*/
 
     return 0;
     

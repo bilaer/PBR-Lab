@@ -20,7 +20,7 @@ class Texture2D {
         // Load functions
         void LoadHDRToTexture(const std::string& path, bool flipY = false);
         void LoadKTXToTexture(const std::string& path);
-        void LoadLDRToTexture(const std::string& path, bool flipY = false); // JPG, PNG...
+        void LoadLDRToTexture(const std::string& path,  bool isSRGB, bool flipY = false);
         GLuint GetTexture() const { return this->texture2d; };
         void ShowTexture2D(GLFWwindow* sharedContext); // Display 2d texture for debuggin purpose
     private:

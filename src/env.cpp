@@ -58,7 +58,6 @@ void Environment::UploadToShader(const std::shared_ptr<Shader>& shader) {
     // Bind prefilter texture
     shader->SetUniform("prefilterMap", PREFILTER_TEXTURE_UNIT);
     this->prefilter->Bind(PREFILTER_TEXTURE_UNIT);    
-    shader->SetUniform("mipLevels", static_cast<float>(this->prefilter->GetMipLevels()));
 
     // Bind BRDF LUT texture
     shader->SetUniform("brdflut", BRDFLUT_TEXTURE_UNIT);

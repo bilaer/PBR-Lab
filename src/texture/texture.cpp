@@ -156,8 +156,8 @@ void Texture2D::LoadKTXToTexture(const std::string& path) {
     }
 }
 
-// Load LDR (jpg, png...) to texture 2d
-void Texture2D::LoadLDRToTexture(const std::string& path, bool flipY) {
+// Load LDR (jpg, png...) to texture 2d, support sRGB format for PBR texture
+void Texture2D::LoadLDRToTexture(const std::string& path,  bool isSRGB, bool flipY) {
     // Whether flip y axis, used when texture is upside down
     stbi_set_flip_vertically_on_load(flipY);
 
@@ -165,6 +165,7 @@ void Texture2D::LoadLDRToTexture(const std::string& path, bool flipY) {
     unsigned char* data = stbi_load(path.c_str(), &width, &height, &nrChannels, 0);
     if (!data) {
         std::cerr << "❌ Failed to load texture: " << path << std::endl;
+        return;
     }
 
     GLenum format;
@@ -177,18 +178,27 @@ void Texture2D::LoadLDRToTexture(const std::string& path, bool flipY) {
     } else {
         std::cerr << "⚠️ Unsupported channel count: " << nrChannels << std::endl;
         stbi_image_free(data);
+        return;
     }
 
     glBindTexture(GL_TEXTURE_2D, this->texture2d); // Bind texture
 
-    glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+    // If the texture is sRGB, set the internal format to GL_SRGB
+    if (isSRGB) {
+        // For sRGB textures, we tell OpenGL to treat the texture as sRGB
+        glTexImage2D(GL_TEXTURE_2D, 0, GL_SRGB, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+    } else {
+        // If it's not sRGB, just use the standard format (linear)
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+    }
+
     glGenerateMipmap(GL_TEXTURE_2D);
 
     // Set formats to match image format
     this->internalFormat = format;
     this->format = format;
 
-    // Set paramters
+    // Set parameters
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);

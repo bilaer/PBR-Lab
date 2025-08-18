@@ -135,7 +135,6 @@ void Mesh::Init() {
         this->GenerateVertices();   //< Must be implemented in derived class
     if (this->indices.empty())
         this->GenerateIndices();    //< Must be implemented in derived class
-    this->GenerateTBN();            //< Generate tangent and bitagnet to calculate TBN matrix
     this->SetupBuffers();           //< Create and bind OpenGL buffers
     
     this->initialized = true;
@@ -176,40 +175,9 @@ void Mesh::SetupBuffers() {
     glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, texCoord));
     glEnableVertexAttribArray(2);
 
-    // tangent in TBN matrix
-    glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, tangent));
-    glEnableVertexAttribArray(3);
-
-    // bitangent in TBN matrix
-    glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, sizeof(Vertex), (void*)offsetof(Vertex, bitangent));
-    glEnableVertexAttribArray(4);
-
     glBindVertexArray(0); // Unbind VAO
 }
 
-
-// Calculate the tangent for TBN matrix
-// Refer https://learnopengl.com/Advanced-Lighting/Normal-Mapping
-glm::vec3 Mesh::CalTangent(const glm::vec2& deltaUV1, const glm::vec2& deltaUV2, const glm::vec3& edge1, const glm::vec3& edge2) {
-    float d = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
-    float tangentX = (deltaUV2.y * edge1.x - deltaUV1.y * edge2.x) * d;
-    float tangentY = (deltaUV2.y * edge1.y - deltaUV1.y * edge2.y) * d;
-    float tangentZ = (deltaUV2.y * edge1.z - deltaUV1.y * edge2.z) * d;
-    glm::vec3 tangent = glm::normalize(glm::vec3(tangentX, tangentY, tangentZ));
-    //std::cerr << "Ta: " << tangent.x << " " << tangent.y << " " << tangent.z << "\n" << std::endl;
-    return tangent;
-
-}
-
-// Calculate the bitangent for TBN matrix
-glm::vec3 Mesh::CalBitangent(const glm::vec2& deltaUV1, const glm::vec2& deltaUV2, const glm::vec3& edge1, const glm::vec3& edge2) {
-    float d = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
-    float bitangentX = (-deltaUV2.x * edge1.x + deltaUV1.x * edge2.x) * d;
-    float bitangentY = (-deltaUV2.x * edge1.y + deltaUV1.x * edge2.y) * d;
-    float bitangentZ = (-deltaUV2.x * edge1.z - deltaUV1.x * edge2.z) * d;
-    glm::vec3 bitangent = glm::normalize(glm::vec3(bitangentX, bitangentY, bitangentZ));
-    return bitangent;
-}
 
 
 // Draw the mesh
@@ -231,62 +199,39 @@ Sphere::Sphere(float radius, int stacks, int slices): radius(radius), stacks(sta
 // Vertex calculation refers https://www.songho.ca/opengl/gl_sphere.html
 void Sphere::GenerateVertices() {
     for (int i = 0; i <= this->stacks; ++i) {
-        // latitude(stacks) belongs to [pi/2, -pi/2]. i/stacks maps value to [0，1] for u (which will be used for uv)
-        // -0.5 to maps value to [-1/2, 1/2]
-        float stacks_angle = ((float)i / this->stacks - 0.5f) * PI;
-        float y = this->radius * sin(stacks_angle);
-        float zr = this->radius * cos(stacks_angle);
+        float stacks_angle = ((float)i / this->stacks - 0.5f) * PI;  // Latitude angle
+        float y = this->radius * sin(stacks_angle);  // Y position of the vertex
+        float zr = this->radius * cos(stacks_angle); // Radius in the x-z plane
+        
         for (int j = 0; j <= this->slices; ++j) {
-            // longtitude(sector) belongs to [0, 2pi], again i/slices mapes t value to [0, 1] for v
-            float slice_angle = 2 * PI * (float)j / this->slices;
+            float slice_angle = 2 * PI * (float)j / this->slices;  // Longitude angle
             float x = zr * cos(slice_angle);
             float z = zr * sin(slice_angle);
 
-            // Add vertex
             Vertex v;
             v.position = glm::vec3(x, y, z);
+            v.normals = glm::normalize(glm::vec3(x, y, z)); // Normal vector (normalized)
 
-            // Calculate vertex normals
-            v.normals = glm::normalize(glm::vec3(x, y, z));
-
-            // Calculate texture coordinate
-            float TexU = (float)j / this->slices;              
-            float TexV = (float)i / this->stacks; 
+            // Calculate texture coordinates
+            float TexU = (float)j / this->slices;
+            float TexV = (float)i / this->stacks;
             v.texCoord = glm::vec2(TexU, TexV);
 
             this->vertices.push_back(v);
         }
-    };
+    }
 }
-/**
-* Generate Indices for sphere, refers：https://www.songho.ca/opengl/gl_sphere.html
-*             first+1  
-* first    ●---●---●---●---●
-*          |  /|  /|  /|  /|
-*          | / | / | / | / |
-* second   ●---●---●---●---●
-*             second+1
-* first->second->first+1, first+1->second->second+1 forms two triangles
-*
-*/ 
+
 void Sphere::GenerateIndices() {
     for (int i = 0; i < this->stacks; ++i) {
         for (int j = 0; j < this->slices; ++j) {
-            // 注意在生成vertices的时候每一圈纬度生成 slices + 1个点 （for (int j = 0; i <= slices; ++j），而不是 i < slices）
-            // Notice
-            // 比如 slices = 4：
-            //     j = 0, 1, 2, 3, 4 → 生成了 5 个点，0 和 4 在空间位置上是重合的。
-            // 只有生成 slices + 1个点才能使球体闭合. 
-            // 在球体贴图时，让经度方向形成一个闭环，必须把 第一个点和最后一个点重复，这样纹理坐标或几何是连续的
             int first = i * (this->slices + 1) + j;
-            // first 绕着球体转一圈才到达 second
             int second = first + this->slices + 1;
             
-            // First Triagnle
+            // First Triangle
             this->indices.push_back(first);
             this->indices.push_back(second);
             this->indices.push_back(first + 1);
-            
 
             // Second Triangle
             this->indices.push_back(first + 1);
@@ -296,67 +241,29 @@ void Sphere::GenerateIndices() {
     }
 }
 
-// Generate TBN matrix for normal mapping
-void Sphere::GenerateTBN() {
-    std::vector<glm::vec3> tangents(this->vertices.size(), glm::vec3(0.0f));
-    std::vector<glm::vec3> bitangents(this->vertices.size(), glm::vec3(0.0f));
 
-    for(size_t i = 0; i + 2 < this->indices.size(); i += 3) {
-        unsigned int i0 = indices[i];
-        unsigned int i1 = indices[i + 1];
-        unsigned int i2 = indices[i + 2];
+//====================================
+//              Plane
+//====================================
+Plane::Plane(float size): size(size) {
+    this->Init();
+}
 
-        // Get points of the triangle
-        glm::vec3 p1 = this->vertices[i0].position;
-        glm::vec3 p2 = this->vertices[i1].position;
-        glm::vec3 p3 = this->vertices[i2].position;
-        
-        // UV of the triangle
-        glm::vec2 uv1 = this->vertices[i0].texCoord;
-        glm::vec2 uv2 = this->vertices[i1].texCoord;
-        glm::vec2 uv3 = this->vertices[i2].texCoord;
+//Generates 4 vertices for a flat square plane on the XZ-plane.
+void Plane::GenerateVertices() {
+    float half = this->size / 2.0f;
+    this->vertices = {
+        {{-half, 0.0f, half}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}}, // 左下角
+        {{ half, 0.0f, half}, {0.0f, 1.0f, 0.0f}, {1.0f, 0.0f}}, // 右下角
+        {{ half, 0.0f, -half}, {0.0f, 1.0f, 0.0f}, {1.0f, 1.0f}}, // 右上角
+        {{-half, 0.0f, -half}, {0.0f, 1.0f, 0.0f}, {0.0f, 1.0f}}, // 左上角
+    };
+}
 
-        glm::vec3 edge1 = p1 - p2;
-        glm::vec3 edge2 = p3 - p2;
-
-        // Calculate delta uv1 and delta uv2
-        glm::vec2 deltaUV1 = uv1 - uv2;
-        glm::vec2 deltaUV2 = uv3 - uv2;
-
-        // Calculate the tangent and bitangent 
-        glm::vec3 tangent = this->CalTangent(deltaUV1, deltaUV2, edge1, edge2);
-        glm::vec3 bitangent = this->CalBitangent(deltaUV1, deltaUV2, edge1, edge2);
-
-        // add to the vertices;
-        tangents[i0] += tangent;
-        tangents[i1] += tangent;
-        tangents[i2] += tangent;
-
-        bitangents[i0] += bitangent;
-        bitangents[i1] += bitangent;
-        bitangents[i2] += bitangent;
-    }
-
-
-    // normalize the tangent and bitangent
-    for(size_t i = 0; i < this->vertices.size(); i ++) {
-        // Gram-Schmdit process to make sure tangent, bitangent and normal are orthonormal basis
-        glm::vec3 T = tangents[i];
-        glm::vec3 N = vertices[i].normals;
-        T = glm::normalize(T - N * glm::dot(N, T));
-        glm::vec3 B = glm::normalize(glm::cross(N, T));
-        
-        this->vertices[i].tangent = T;
-        this->vertices[i].bitangent = B;
-    }
-
-    // Remove texture seam
-    for (int i = 0; i <= stacks; ++i) {
-        int left  = i * (slices + 1) + 0;
-        int right = i * (slices + 1) + slices;
-
-        vertices[right].tangent = vertices[left].tangent;
-        vertices[right].bitangent = vertices[left].bitangent;
-        vertices[right].normals = vertices[left].normals;
-    }
+//Generates indices to form two triangles for the plane.
+void Plane::GenerateIndices() {
+    this->indices = {
+        0, 1, 2,
+        2, 3, 0
+    };
 }
