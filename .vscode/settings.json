@@ -78,7 +78,10 @@
         "list": "cpp",
         "unordered_set": "cpp",
         "regex": "cpp",
-        "queue": "cpp"
+        "queue": "cpp",
+        "forward_list": "cpp",
+        "numeric": "cpp",
+        "valarray": "cpp"
     },
     "cmake.sourceDirectory": "/Users/weichengliao/Desktop/Irradiance-gen-gpu/include/glm/glm"
 }

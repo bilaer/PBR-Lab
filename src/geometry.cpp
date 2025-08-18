@@ -178,8 +178,6 @@ void Mesh::SetupBuffers() {
     glBindVertexArray(0); // Unbind VAO
 }
 
-
-
 // Draw the mesh
 void Mesh::Draw(){
     glBindVertexArray(this->VAO);

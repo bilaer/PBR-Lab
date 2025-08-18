@@ -15,7 +15,9 @@
 #include "imgui/imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
-#include "model_loader.h"
+#include "model_loader/ply_loader.h"
+#include "model_loader/gltf_loader.h"
+#include "scene.h"
 
 // ======== Camera state ========
 float lastX = 400, lastY = 300;
@@ -232,6 +234,12 @@ int main() {
     texMaterial->LoadNormalMap(normalPath);
 	texMaterial->LoadAoMap(aoPath);
 
+    // Pure color material
+    auto colorMaterial = std::make_shared<PBRMaterial>();
+    colorMaterial->SetBaseColor(glm::vec3(0.0f, 0.0f, 0.0f));
+    colorMaterial->SetRoughness(0.2f);
+    colorMaterial->SetMetalness(0.2f);
+
     //=================================================
 
     // ==========Load HDR equirectangular==============
@@ -242,21 +250,6 @@ int main() {
     envMap->LoadEquiToCubemap(envMapPath);
 
     auto skyShader = std::make_shared<Shader>("shader/debug.vert", "shader/debug.frag");
-
-    // ====================Assemble BRDF======================
-    auto pbrShader = std::make_shared<Shader>("shader/pbr_tex.vert", "shader/pbr_tex.frag"); // Init prb shader
-    pbrShader->Use(); 
-
-    // upload irradiance, prefilter and brdf lut and material info to shader
-    env.UploadToShader(pbrShader);
-
-    // ==================Setup material value =================
-    float roughness = 0.0f; // Will be adjusted using imgui
-    float metalness = 0.0f;  // Will be adjusted using imgui
-	// Albedo color
-	float R = 0.0;
-	float G = 0.0;
-	float B = 0.0;
 
     // ================Initialize ImGui====================
 	/*IMGUI_CHECKVERSION();
@@ -278,14 +271,29 @@ int main() {
         std::cerr << "Failed to load and transform PLY model." << std::endl;
         return -1;  // Exit if loading fails
     }
+
+    // Create scene manager
+    std::shared_ptr<Scene> scene = std::make_shared<Scene>();
+
 	// Sphere for simple material map testing
 	auto sphere = std::make_shared<Sphere>(0.5f, 50, 50);
 	auto plane = std::make_shared<Plane>(2.0f);
 
+    auto sphereNode = std::make_shared<SceneNode>(sphere, texMaterial);
+    auto planeNode = std::make_shared<SceneNode>(plane, texMaterial);
+    //auto modelNode = std::make_shared<SceneNode>(loadedModel, colorMaterial);
+
+    // Add node to scene
+    //scene->AddNode(sphereNode);
+    scene->AddNode(planeNode);
+    scene->AddNode(sphereNode);
+    
+
+    // ====================Upload env map======================
+    auto pbrShader = std::make_shared<Shader>("shader/pbr_tex.vert", "shader/pbr_tex.frag"); // Init prb shader
+    pbrShader->Use(); 
     // Upload env mapping
     env.UploadToShader(pbrShader);
-    // Upload material setting
-    texMaterial->UploadToShader(pbrShader); 
 
     glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
     // ==================== Main Render Loop ===================
@@ -330,13 +338,15 @@ int main() {
 
         // ==================== Render Scene Objects (Sphere) =====================
         pbrShader->Use();
-
-        pbrShader->SetUniform("model", model);
+        // Upload model, view and proj matrix
+        //pbrShader->SetUniform("model", model);
         pbrShader->SetUniform("view", view);
         pbrShader->SetUniform("projection", proj);
         pbrShader->SetUniform("camPos", camPos);
 
-    	plane->Draw();
+        scene->Render(pbrShader);
+
+    	//plane->Draw();
 
         // ================== Render ImGui UI =====================
 		/*ImGui::SetNextWindowSize(ImVec2(400, 200), ImGuiCond_Once);
