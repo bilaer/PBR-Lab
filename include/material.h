@@ -13,7 +13,7 @@ class PBRMaterial {
         void SetRoughnessMap(const std::shared_ptr<Texture2D>& texture) { this->roughnessMap = texture; };
         void SetMetalnessMap(const std::shared_ptr<Texture2D>& texture) { this->metalnessMap = texture; };
         void SetNormalMap(const std::shared_ptr<Texture2D>& texture) { this->normalMap = texture; };
-        // Todo: AO Map
+        void SetAOMap(const std::shared_ptr<Texture2D>& texture) { this->aoMap = texture; }; 
         void SetRoughness(float roughness) { this->roughness = roughness; };
         void SetMetalness(float metalness) { this->metalness = metalness; };
         void SetBaseColor(glm::vec3 baseColor) { this->baseColor = baseColor; };
@@ -22,7 +22,7 @@ class PBRMaterial {
         void LoadRoughnessMap(const std::string& path);
         void LoadMetalnessMap(const std::string& path);
         void LoadNormalMap(const std::string& path);
-        // Todo: Load ao map
+        void LoadAoMap(const std::string& path);
         GLuint GetAlbedoMapTexture() const { return this->albedoMap->GetTexture(); };
         GLuint GetRoughnessMapTexture() const { return this->roughnessMap->GetTexture(); };
         GLuint GetMetalnessMapTexture() const { return this->metalnessMap->GetTexture(); };

@@ -225,30 +225,13 @@ int main() {
     std::string albedoPath = "assets/material/color.jpg";
 	std::string aoPath = "assets/material/ao.jpg";
 
-	auto albedoMap = std::make_shared<Texture2D>();
-	albedoMap->LoadLDRToTexture(albedoPath, true);
-	auto roughnessMap = std::make_shared<Texture2D>();
-	roughnessMap->LoadLDRToTexture(roughnessPath, false);
-	auto metalnessMap = std::make_shared<Texture2D>();
-    metalnessMap->LoadLDRToTexture(metalPath, false);
-	auto normalMap = std::make_shared<Texture2D>();
-	normalMap->LoadLDRToTexture(normalPath, false);
-	auto aoMap = std::make_shared<Texture2D>();
-	aoMap->LoadLDRToTexture(aoPath, false);
-
     // Create material with textures
-    /*auto texMaterial = std::make_shared<PBRMaterial>();
+    auto texMaterial = std::make_shared<PBRMaterial>();
     texMaterial->LoadAlbedoMap(albedoPath);
-    texMaterial->LoadMetalnessMap(metalPath);
+    texMaterial->LoadRoughnessMap(roughnessPath);
     texMaterial->LoadNormalMap(normalPath);
-    texMaterial->LoadRoughnessMap(roughnessPath);*/
+	texMaterial->LoadAoMap(aoPath);
 
-    // Create material without texture
-    auto pureMaterial = std::make_shared<PBRMaterial>();
-    pureMaterial->SetBaseColor(glm::vec3(1.0f, 0.0f, 0.0f));   // 红色
-    pureMaterial->SetRoughness(0.2f);                           // 光滑表面
-    pureMaterial->SetMetalness(1.0f);                           // 纯金属
-    pureMaterial->SetAO(1.0f);                                  // 全环境光，无遮挡
     //=================================================
 
     // ==========Load HDR equirectangular==============
@@ -299,6 +282,11 @@ int main() {
 	auto sphere = std::make_shared<Sphere>(0.5f, 50, 50);
 	auto plane = std::make_shared<Plane>(2.0f);
 
+    // Upload env mapping
+    env.UploadToShader(pbrShader);
+    // Upload material setting
+    texMaterial->UploadToShader(pbrShader); 
+
     glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
     // ==================== Main Render Loop ===================
     while (!glfwWindowShouldClose(window)) {
@@ -342,29 +330,11 @@ int main() {
 
         // ==================== Render Scene Objects (Sphere) =====================
         pbrShader->Use();
-		env.UploadToShader(pbrShader);
+
         pbrShader->SetUniform("model", model);
         pbrShader->SetUniform("view", view);
         pbrShader->SetUniform("projection", proj);
         pbrShader->SetUniform("camPos", camPos);
-
-        // Set material
-		pbrShader->SetUniform("albedoMap", ALBEDO_TEXTURE_UNIT);
-        pbrShader->SetUniform("roughnessMap", ROUGHNESS_TEXTURE_UNIT);  
-        //pbrShader->SetUniform("metalnessMap", METALNESS_TEXTURE_UNIT); 
-		pbrShader->SetUniform("normalMap", NORMAL_TEXTURE_UNIT); 
-		pbrShader->SetUniform("aoMap", AO_TEXTURE_UNIT);
-
-		glActiveTexture(GL_TEXTURE0 + ALBEDO_TEXTURE_UNIT);
-        glBindTexture(GL_TEXTURE_2D, albedoMap->GetTexture());
-		glActiveTexture(GL_TEXTURE0 + ROUGHNESS_TEXTURE_UNIT);
-		glBindTexture(GL_TEXTURE_2D, roughnessMap->GetTexture());
-		//glActiveTexture(GL_TEXTURE0 + METALNESS_TEXTURE_UNIT);
-		//glBindTexture(GL_TEXTURE_2D, metalnessMap->GetTexture());
-		glActiveTexture(GL_TEXTURE0 + NORMAL_TEXTURE_UNIT);
-		glBindTexture(GL_TEXTURE_2D, normalMap->GetTexture());
-		glActiveTexture(GL_TEXTURE0 + AO_TEXTURE_UNIT);
-		glBindTexture(GL_TEXTURE_2D, aoMap->GetTexture());
 
     	plane->Draw();
 

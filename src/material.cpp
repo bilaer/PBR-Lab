@@ -6,13 +6,13 @@
 #include <glm/glm.hpp>
 
 
-PBRMaterial::PBRMaterial(): baseColor(glm::vec3(1.0f, 0.0f, 0.0f)), metalness(1.0f), roughness(0.5f), aoFactor(1.0f) {
-    // Set default fallback values for materia
+PBRMaterial::PBRMaterial(): baseColor(glm::vec3(1.0f, 0.0f, 0.0f)), metalness(0.0f), roughness(0.5f), aoFactor(1.0f) {
+    // Set default fallback values for material
 }
 
 void PBRMaterial::LoadAlbedoMap(const std::string& path) {
     this->albedoMap = std::make_shared<Texture2D>();
-    this->albedoMap->LoadLDRToTexture(path, true);
+    this->albedoMap->LoadLDRToTexture(path, true); // Use sRGB format for albedo map
 }
 
 void PBRMaterial::LoadMetalnessMap(const std::string& path) {
@@ -30,6 +30,11 @@ void PBRMaterial::LoadNormalMap(const std::string& path) {
     this->normalMap->LoadLDRToTexture(path, false);
 }
 
+void PBRMaterial::LoadAoMap(const std::string& path) {
+    this->aoMap = std::make_shared<Texture2D>();
+    this->aoMap->LoadLDRToTexture(path, false);
+}
+
 void PBRMaterial::UploadToShader(const std::shared_ptr<Shader>& shader) const {
     shader->Use();
 
@@ -37,35 +42,38 @@ void PBRMaterial::UploadToShader(const std::shared_ptr<Shader>& shader) const {
     shader->SetUniform("useAlbedoMap",    albedoMap    ? 1 : 0);
     shader->SetUniform("useRoughnessMap", roughnessMap ? 1 : 0);
     shader->SetUniform("useMetalnessMap", metalnessMap ? 1 : 0);
-    //shader->SetUniform("useNormalMap",    normalMap    ? 1 : 0);
+    shader->SetUniform("useNormalMap",    normalMap    ? 1 : 0);
     shader->SetUniform("useAOMap",        aoMap        ? 1 : 0);
 
     // --- fallbacks (used when no texture is provided ) ---
-    shader->SetUniform("albedo",    baseColor);
+    shader->SetUniform("baseColor", baseColor);
     shader->SetUniform("roughness", roughness);
     shader->SetUniform("metalness", metalness);
     shader->SetUniform("ao",        aoFactor);
 
+    
     if (albedoMap) {
-        albedoMap->Bind(ALBEDO_TEXTURE_UNIT);
         shader->SetUniform("albedoMap", ALBEDO_TEXTURE_UNIT);
+        albedoMap->Bind(ALBEDO_TEXTURE_UNIT);
     }
     if (roughnessMap) {
-        roughnessMap->Bind(ROUGHNESS_TEXTURE_UNIT);
         shader->SetUniform("roughnessMap", ROUGHNESS_TEXTURE_UNIT);
+        roughnessMap->Bind(ROUGHNESS_TEXTURE_UNIT);
     }
     if (metalnessMap) {
-        metalnessMap->Bind(METALNESS_TEXTURE_UNIT);
         shader->SetUniform("metalnessMap", METALNESS_TEXTURE_UNIT);
+        metalnessMap->Bind(METALNESS_TEXTURE_UNIT);
     }
     if (normalMap) {
-        normalMap->Bind(NORMAL_TEXTURE_UNIT);
         shader->SetUniform("normalMap", NORMAL_TEXTURE_UNIT);
+        normalMap->Bind(NORMAL_TEXTURE_UNIT);
     }
     if (aoMap) {
-        aoMap->Bind(AO_TEXTURE_UNIT);
         shader->SetUniform("aoMap", AO_TEXTURE_UNIT);
+        aoMap->Bind(AO_TEXTURE_UNIT);
     }
 }
+
+
 
 

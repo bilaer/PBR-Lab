@@ -13,10 +13,23 @@ uniform samplerCube irradianceMap;
 uniform samplerCube prefilterMap;
 uniform sampler2D brdflut;
 
+// If use single value or texture
+uniform bool useAlbedoMap;
+uniform bool useRoughnessMap;
+uniform bool useMetalnessMap;
+uniform bool useNormalMap;
+uniform bool useAOMap;
+
+// Material fallback values if no textures
+uniform vec3 baseColor;
+uniform float roughness;
+uniform float metalness;
+uniform float ao;
+
 // Material Texture
 uniform sampler2D albedoMap;
 uniform sampler2D roughnessMap;
-//uniform sampler2D metalnessMap;
+uniform sampler2D metalnessMap;
 uniform sampler2D normalMap;
 uniform sampler2D aoMap;
 
@@ -68,34 +81,34 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
 
 void main()
 {
-    vec3 baseColor = pow(texture(albedoMap, TexCoords).rgb, vec3(2.2)); // gamma correction
-    float roughness = texture(roughnessMap, TexCoords).r;
-    float ao = texture(aoMap, TexCoords).r;
-    //float metalness = texture(metalnessMap, TexCoords).r;
-    float metalness = 0;
+    vec3 baseColorFinal = useAlbedoMap ? pow(texture(albedoMap, TexCoords).rgb, vec3(2.2)) : baseColor;
+    float roughnessFinal = useRoughnessMap ? texture(roughnessMap, TexCoords).r : roughness;
+    float metalnessFinal = useMetalnessMap ? texture(metalnessMap, TexCoords).r : metalness;
+    float aoFinal = useAOMap ? texture(aoMap, TexCoords).r : ao;
 
     // Transform normal from tangent space to world space
-    vec3 N = getNormalFromMap();
+    vec3 N = useNormalMap ? getNormalFromMap() : normalize(Normal);
     vec3 V = normalize(camPos - WorldPos);
     vec3 R = normalize(reflect(-V, N));
     float NdotV = max(dot(N, V), 0.0);
 
     // calculate reflectance at normal incidence; if dia-electric (like plastic) use F0 
     // of 0.04 and if it's a metal, use the albedo color as F0 (metallic workflow) 
-    vec3 F0 = mix(vec3(0.04), baseColor, metalness);
-    vec3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughness);
+    vec3 F0 = mix(vec3(0.04), baseColorFinal, metalnessFinal);
+    vec3 F = fresnelSchlickRoughness(max(dot(N, V), 0.0), F0, roughnessFinal);
 
+    // Energy conservation
     vec3 kS = F;
     vec3 kD = 1.0 - kS;
-    kD *= 1.0 - metalness;
+    kD *= 1.0 - metalnessFinal;
 
     // IBL - diffuse  
     vec3 irradiance = texture(irradianceMap, N).rgb;
-    vec3 diffuse = irradiance * baseColor;
+    vec3 diffuse = irradiance * baseColorFinal;
 
     // IBL - Specular
-    vec3 prefilter = textureLod(prefilterMap, R, roughness * MAX_REFLECTION_LOD).rgb;
-    vec2 brdf = texture(brdflut, vec2(NdotV, roughness)).rg;
+    vec3 prefilter = textureLod(prefilterMap, R, roughnessFinal * MAX_REFLECTION_LOD).rgb;
+    vec2 brdf = texture(brdflut, vec2(NdotV, roughnessFinal)).rg;
     vec3 specular =  prefilter * (FresnelSchlick(NdotV, F0) * brdf.x + brdf.y);
 
     // Combine    
@@ -108,5 +121,3 @@ void main()
 
     FragColor = vec4(color, 1.0);
 }
-
-
