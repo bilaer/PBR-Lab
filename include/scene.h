@@ -24,7 +24,7 @@ public:
     const glm::vec3 GetRotation() const { return this->rotation; };
     const glm::vec3 GetScale() const { return this->scale; };
 
-    // API for glb loading
+    // API for glb 
     void SetLocalTransformMatrix(const glm::mat4& m);
     
     // Getter functions for local and world transformation matrices

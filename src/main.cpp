@@ -277,12 +277,18 @@ int main() {
 
     GlbLoader loader;
 
-    const std::string glbPath = "assets/models/DamagedHelmet.glb";
+    auto hemlet = std::make_shared<SceneNode>(nullptr, nullptr);
 
-    if (!loader.LoadFile(glbPath, scene)) {
+    const std::string glbPath = "assets/models/Duck.glb";
+
+    if (!loader.LoadFile(glbPath, hemlet)) {
         std::cerr << "Load glb failed\n";
         return -1;
     }
+
+    hemlet->SetScale(glm::vec3(0.1f));
+
+    scene->AddNode(hemlet);
 
 	// Simple object material map testing
 	/*auto sphere = std::make_shared<Sphere>(0.5f, 50, 50);

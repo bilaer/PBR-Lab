@@ -50,6 +50,7 @@ void SceneNode::UploadToShader(const std::shared_ptr<Shader>& shader) {
     }
 }
 
+
 // Draw this node and all its children recursively
 void SceneNode::Draw(const std::shared_ptr<Shader>& shader) {
     // Draw if current node contains mesh
