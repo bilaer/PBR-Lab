@@ -1,5 +1,6 @@
 #include "scene.h"
 
+
 // Update the local transformation matrix
 void SceneNode::UpdateLocalTransform() {
     this->localTransform = glm::mat4(1.0f);  // Initialize as unit matrix
@@ -42,25 +43,50 @@ void SceneNode::AddChild(const std::shared_ptr<SceneNode>& child) {
 // Upload material and transformation matrices to the shader
 void SceneNode::UploadToShader(const std::shared_ptr<Shader>& shader) {
     shader->Use();
-    this->material->UploadToShader(shader);  // Upload the material to the shader
-    shader->SetUniform("model", this->worldTransform); // Upload model matrix
+    shader->SetUniform("model", this->worldTransform); // set model first
+
+    if (this->material) {
+        this->material->UploadToShader(shader);
+    }
 }
 
 // Draw this node and all its children recursively
 void SceneNode::Draw(const std::shared_ptr<Shader>& shader) {
-    // Upload material and transformation matrices
-    this->UploadToShader(shader);
-
-    // Draw the mesh if it exists
+    // Draw if current node contains mesh
     if (this->mesh) {
+        this->UploadToShader(shader);
         this->mesh->Draw();
     }
-
-    // Recursively draw all child nodes
+    // Recursively draw all child node
     for (auto& child : this->children) {
         child->Draw(shader);
     }
 }
+
+void SceneNode::SetLocalTransformMatrix(const glm::mat4& m) {
+    this->localTransform = m;
+    this->UpdateWorldTransform();
+}
+
+// Transform getter and setters
+void SceneNode::SetPosition(const glm::vec3& p) {
+    this->position = p;
+    this->UpdateLocalTransform();
+    this->UpdateWorldTransform(); // propagate transform effect to child
+}
+
+void SceneNode::SetRotation(const glm::vec3& r) {
+    this->rotation = r;
+    this->UpdateLocalTransform();
+    this->UpdateWorldTransform();
+}
+
+void SceneNode::SetScale(const glm::vec3& s) {
+    this->scale = s;
+    this->UpdateLocalTransform();
+    this->UpdateWorldTransform();
+}
+
 
 //==================Scene========================
 void Scene::AddNode(const std::shared_ptr<SceneNode>& node) {

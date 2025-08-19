@@ -19,12 +19,15 @@ uniform bool useRoughnessMap;
 uniform bool useMetalnessMap;
 uniform bool useNormalMap;
 uniform bool useAOMap;
+uniform bool useRoughnessMetalMap;
+uniform bool useEmissiveMap;
 
 // Material fallback values if no textures
 uniform vec3 baseColor;
 uniform float roughness;
 uniform float metalness;
 uniform float ao;
+uniform vec3 emissive;
 
 // Material Texture
 uniform sampler2D albedoMap;
@@ -32,9 +35,11 @@ uniform sampler2D roughnessMap;
 uniform sampler2D metalnessMap;
 uniform sampler2D normalMap;
 uniform sampler2D aoMap;
+uniform sampler2D roughnessMetalMap;
+uniform sampler2D emissiveMap;
 
 const float PI = 3.14159265359;
-const float MAX_REFLECTION_LOD = 4.0;
+const float MAX_REFLECTION_LOD = 7.0;
 
 // Christian Schüler - "Followup: Normal Mapping Without Precomputed Tangents", 2013
 mat3 cotangent_frame(vec3 N, vec3 p, vec2 uv)
@@ -81,10 +86,25 @@ vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
 
 void main()
 {
+    // Albedo
     vec3 baseColorFinal = useAlbedoMap ? pow(texture(albedoMap, TexCoords).rgb, vec3(2.2)) : baseColor;
-    float roughnessFinal = useRoughnessMap ? texture(roughnessMap, TexCoords).r : roughness;
-    float metalnessFinal = useMetalnessMap ? texture(metalnessMap, TexCoords).r : metalness;
+
+    // Roughness and metalic
+    float roughnessFinal;
+    float metalnessFinal;
+    if(useRoughnessMetalMap) {
+        roughnessFinal = texture(roughnessMetalMap, TexCoords).g;
+        metalnessFinal = texture(roughnessMetalMap, TexCoords).b;
+    } else {
+        roughnessFinal = useRoughnessMap ? texture(roughnessMap, TexCoords).r : roughness;
+        metalnessFinal = useMetalnessMap ? texture(metalnessMap, TexCoords).r : metalness;
+    }
+    
+    // AO
     float aoFinal = useAOMap ? texture(aoMap, TexCoords).r : ao;
+
+    // Emissive
+    vec3 emissiveFinal = useEmissiveMap ? texture(emissiveMap, TexCoords).rgb : emissive;
 
     // Transform normal from tangent space to world space
     vec3 N = useNormalMap ? getNormalFromMap() : normalize(Normal);
@@ -111,8 +131,8 @@ void main()
     vec2 brdf = texture(brdflut, vec2(NdotV, roughnessFinal)).rg;
     vec3 specular =  prefilter * (FresnelSchlick(NdotV, F0) * brdf.x + brdf.y);
 
-    // Combine    
-    vec3 ambient = (kD * diffuse + specular) * ao;
+    // Combine diffuse and specular values
+    vec3 ambient = (kD * diffuse + specular) * aoFinal + emissiveFinal;
 
     // HDR tonemapping
     vec3 color = ambient / (ambient + vec3(1.0));

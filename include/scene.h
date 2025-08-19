@@ -1,5 +1,6 @@
 #pragma once
 #include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include "geometry.h"
 #include "material.h"
 #include "shader.h"
@@ -15,6 +16,17 @@ public:
           localTransform(glm::mat4(1.0f)), worldTransform(glm::mat4(1.0f)),
           position(0.0f), rotation(0.0f), scale(1.0f), parent(nullptr) {}
 
+    // transform getter and setter
+    void SetPosition(const glm::vec3& p);
+    void SetRotation(const glm::vec3& r); // Rotation in radians
+    void SetScale(const glm::vec3& s);
+    const glm::vec3 GetPosition() const { return this->position; };
+    const glm::vec3 GetRotation() const { return this->rotation; };
+    const glm::vec3 GetScale() const { return this->scale; };
+
+    // API for glb loading
+    void SetLocalTransformMatrix(const glm::mat4& m);
+    
     // Getter functions for local and world transformation matrices
     glm::mat4 GetLocalTransform() const { return this->localTransform; }
     glm::mat4 GetWorldTransform() const { return this->worldTransform; }

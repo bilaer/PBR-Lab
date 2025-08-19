@@ -275,8 +275,17 @@ int main() {
     // Create scene manager
     std::shared_ptr<Scene> scene = std::make_shared<Scene>();
 
-	// Sphere for simple material map testing
-	auto sphere = std::make_shared<Sphere>(0.5f, 50, 50);
+    GlbLoader loader;
+
+    const std::string glbPath = "assets/models/DamagedHelmet.glb";
+
+    if (!loader.LoadFile(glbPath, scene)) {
+        std::cerr << "Load glb failed\n";
+        return -1;
+    }
+
+	// Simple object material map testing
+	/*auto sphere = std::make_shared<Sphere>(0.5f, 50, 50);
 	auto plane = std::make_shared<Plane>(2.0f);
 
     auto sphereNode = std::make_shared<SceneNode>(sphere, texMaterial);
@@ -287,7 +296,7 @@ int main() {
     //scene->AddNode(sphereNode);
     scene->AddNode(planeNode);
     //scene->AddNode(sphereNode);
-    scene->AddNode(loadedModelNode);
+    scene->AddNode(loadedModelNode);*/
 
     // ====================Upload env map======================
     auto pbrShader = std::make_shared<Shader>("shader/pbr_tex.vert", "shader/pbr_tex.frag"); // Init prb shader
@@ -296,6 +305,9 @@ int main() {
     env.UploadToShader(pbrShader);
 
     glEnable(GL_TEXTURE_CUBE_MAP_SEAMLESS);
+    glEnable(GL_CULL_FACE); // Enable face culling to accerate program
+    glCullFace(GL_BACK);
+    glFrontFace(GL_CCW);
     // ==================== Main Render Loop ===================
     while (!glfwWindowShouldClose(window)) {
         ProcessInput(window);
