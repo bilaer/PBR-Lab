@@ -67,4 +67,10 @@ class Scene {
         void Render(const std::shared_ptr<Shader>& shader);
     private:
         std::vector<std::shared_ptr<SceneNode>> rootNodes;
+
+        // Aplha queue
+        std::vector<std::shared_ptr<SceneNode>> queueOpaque;
+        std::vector<std::shared_ptr<SceneNode>> queueMasked;
+        std::vector<std::shared_ptr<SceneNode>> queueTransparent;  
+        void SortTransparent(); // Sort transparent queue
 };

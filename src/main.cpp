@@ -16,7 +16,7 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "model_loader/ply_loader.h"
-#include "model_loader/gltf_loader.h"
+#include "model_loader/glb_loader.h"
 #include "scene.h"
 
 // ======== Camera state ========
@@ -264,7 +264,7 @@ int main() {
 	//================Load Testing Model/objects=====================
 	// Load complex ply model
 	Mesh loadedModel;
-	std::string modelPath = "assets/models/bun_zipper.ply";
+	std::string modelPath = "assets/models/dragon_vrip.ply";
     if (LoadPLYToMesh(modelPath, loadedModel)) {
         std::cout << "PLY model loaded and transformed successfully!" << std::endl;
     } else {
@@ -279,29 +279,22 @@ int main() {
 
     auto hemlet = std::make_shared<SceneNode>(nullptr, nullptr);
 
-    const std::string glbPath = "assets/models/Duck.glb";
+    const std::string glbPath = "assets/models/DamagedHelmet.glb";
 
     if (!loader.LoadFile(glbPath, hemlet)) {
         std::cerr << "Load glb failed\n";
         return -1;
     }
-
-    hemlet->SetScale(glm::vec3(0.1f));
-
+    //hemlet->SetScale(glm::vec3(100.0f));
     scene->AddNode(hemlet);
 
 	// Simple object material map testing
-	/*auto sphere = std::make_shared<Sphere>(0.5f, 50, 50);
-	auto plane = std::make_shared<Plane>(2.0f);
-
-    auto sphereNode = std::make_shared<SceneNode>(sphere, texMaterial);
+	/*auto plane = std::make_shared<Plane>(2.0f);
     auto planeNode = std::make_shared<SceneNode>(plane, texMaterial);
     auto loadedModelNode = std::make_shared<SceneNode>(std::make_shared<Mesh>(loadedModel), colorMaterial);
 
     // Add node to scene
-    //scene->AddNode(sphereNode);
     scene->AddNode(planeNode);
-    //scene->AddNode(sphereNode);
     scene->AddNode(loadedModelNode);*/
 
     // ====================Upload env map======================

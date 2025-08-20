@@ -15,6 +15,7 @@
         "src/geometry.cpp",
         "src/tinygltf.cpp",
         "src/model_loader/ply_loader.cpp",
+        "src/model_loader/glb_loader.cpp",
         "src/model_loader/gltf_loader.cpp",
         "src/scene.cpp",
         "src/cubemap/skybox.cpp",

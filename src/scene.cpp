@@ -58,6 +58,7 @@ void SceneNode::Draw(const std::shared_ptr<Shader>& shader) {
         this->UploadToShader(shader);
         this->mesh->Draw();
     }
+
     // Recursively draw all child node
     for (auto& child : this->children) {
         child->Draw(shader);

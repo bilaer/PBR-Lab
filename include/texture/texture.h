@@ -21,7 +21,13 @@ class Texture2D {
         void LoadHDRToTexture(const std::string& path, bool flipY = false);
         void LoadKTXToTexture(const std::string& path);
         void LoadLDRToTexture(const std::string& path,  bool isSRGB, bool flipY = false);
+
+        // Load texture directly pixels
+        void CreateFromPixels(const unsigned char* pixels, int w, int h, int comp, bool isSRGB);
+
+        // Texture getter and setter
         GLuint GetTexture() const { return this->texture2d; };
+        void SetTexture(GLuint id) { this->texture2d = id; };
         void ShowTexture2D(GLFWwindow* sharedContext); // Display 2d texture for debuggin purpose
     private:
         unsigned int width;

@@ -311,5 +311,41 @@ void Texture2D::ShowTexture2D(GLFWwindow* sharedContext) {
     glfwDestroyWindow(debugWindow);
 }
 
+// Load texture from pixels
+void Texture2D::CreateFromPixels(const unsigned char* pixels, int w, int h, int comp, bool isSRGB) {
+    if (!pixels || w<=0 || h<=0) return;
+
+    if (this->GetTexture()==0) { 
+        GLuint id=0; glGenTextures(1,&id); this->SetTexture(id); 
+    }
+    glBindTexture(GL_TEXTURE_2D, this->GetTexture());
+
+    GLint prevAlign; glGetIntegerv(GL_UNPACK_ALIGNMENT, &prevAlign);
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);  
+
+    GLenum fmt=GL_RGBA, internal=GL_RGBA8;
+    switch (comp) {
+        case 1: fmt=GL_RED;  internal=GL_R8;  break;                  
+        case 2: fmt=GL_RG;   internal=GL_RG8; break;
+        case 3: fmt=GL_RGB;  internal=isSRGB?GL_SRGB8:GL_RGB8; break;
+        default: // 4
+            fmt=GL_RGBA; internal=isSRGB?GL_SRGB8_ALPHA8:GL_RGBA8; break;
+    }
+
+    glTexImage2D(GL_TEXTURE_2D, 0, internal, w, h, 0, fmt, GL_UNSIGNED_BYTE, pixels);
+
+    if (comp==1) { GLint swz[4]={GL_RED,GL_RED,GL_RED,GL_ONE};
+                   glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, swz); }
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glGenerateMipmap(GL_TEXTURE_2D);
+
+    glPixelStorei(GL_UNPACK_ALIGNMENT, prevAlign);
+    glBindTexture(GL_TEXTURE_2D, 0);
+}
+
 
 
