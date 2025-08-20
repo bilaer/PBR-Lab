@@ -38,9 +38,9 @@ All environment maps are generated using my custom **IBL Gen** tool, which produ
 
 ## 📷 Screenshots
 
-![Result](examples/result.jpg)
+![Result](examples/result.png)
 
-![Result-1](examples/result-1.jpg)
+![Result-1](examples/result-1.png)
 
 
 ## 🛠️ Dependencies
