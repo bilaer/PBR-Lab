@@ -1,6 +1,6 @@
 # PBR Lab
 
-**PBR Lab** is an experimental/learning project focused on testing **Physically Based Rendering (PBR)** with **Image-Based Lighting (IBL)**.  
+**PBR Lab** is an experimental learning project that implements **Physically Based Rendering (PBR)** with **Image-Based Lighting (IBL)** from scratch
 All environment maps are generated using my custom **IBL Gen** tool, which produces the **Irradiance Map**, **Prefilter Map**, and **BRDF LUT** on the GPU.
 
 
@@ -27,9 +27,9 @@ All environment maps are generated using my custom **IBL Gen** tool, which produ
   - Clearcoat  
   - Transmission  
   - (and more glTF PBR extensions in the future)
-- **Extended BRDF Models**
+- **Extended BRDF Shader**
   - Anisotropic BRDF  
-  - Clearcoat BRDF (custom implementation)  
+  - Clearcoat BRDF
 - **Real-time Approximations**
   - Spherical Harmonics (SH) support for dynamic irradiance
 - **Additional Features**
