@@ -20,21 +20,20 @@ All environment maps are generated using my custom **IBL Gen** tool, which produ
     - Prefilter Map
     - BRDF LUT
 
----
 
 ## 🛠️ Dependencies
 
 - **Rendering & Assets**
-  - `stb_image`: load 2D textures
-  - `tinygltf`: load `.glb` / `.gltf` models
-  - `assimp`: load `.ply` models
-  - `gli`: read `.ktx` environment maps and LUTs
+  - [stb_image](https://github.com/nothings/stb): load 2D textures
+  - [TinyGLTF](https://github.com/syoyo/tinygltf): load `.glb` / `.gltf` models
+  - [Assimp](https://github.com/assimp/assimp): load `.ply` models
+  - [gli](https://github.com/g-truc/gli): read `.ktx` environment maps and LUTs
 - **Debug GUI**
-  - `ImGui`: in-engine debugging interface
+  - [Dear ImGui](https://github.com/ocornut/imgui): in-engine debugging interface
 - **Offline Tool**
-  - **IBL Gen** (custom): My custom GPU-based tool for generating environment maps and BRDF LUTs (to be open-sourced soon).
+  - **IBL Gen** (self-developed): My custom GPU-based tool for generating environment maps and BRDF LUTs (to be open-sourced soon).
 
----
+
 
 ## 🚀 Roadmap
 
@@ -45,7 +44,6 @@ All environment maps are generated using my custom **IBL Gen** tool, which produ
 - Provide more built-in geometries and model format support
 - Enhance debugging and visualization tools
 - Might grow into a complete graphics engine in the future.
----
 
 ## 📷 Screenshots
 
@@ -55,14 +53,9 @@ All environment maps are generated using my custom **IBL Gen** tool, which produ
 |--------------|-------------|
 | ![](images/sphere.png) | ![](images/plane.png) |
 
----
 
 ## 🔧 Build & Run
 
 > **TODO:** Instructions for building and running will be added later.
 
----
 
-## 📄 License
-
-MIT License
