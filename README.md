@@ -38,6 +38,22 @@ All environment maps are generated using my custom **IBL Gen** tool, which produ
 
 ## 📷 Screenshots
 
+![Result](examples/result.jpg)
+
+![Result-1](examples/result-1.jpg)
+
+
+## 🛠️ Dependencies
+
+- **Rendering & Assets**
+  - [stb_image](https://github.com/nothings/stb): load 2D textures
+  - [TinyGLTF](https://github.com/syoyo/tinygltf): load `.glb` / `.gltf` models
+  - [Assimp](https://github.com/assimp/assimp): load `.ply` models
+  - [gli](https://github.com/g-truc/gli): read `.ktx` environment maps and LUTs
+- **Debug GUI**
+  - [Dear ImGui](https://github.com/ocornut/imgui): in-engine debugging interface
+- **Offline Tool**
+  - **IBL Gen** (self-developed): My custom GPU-based tool for generating environment maps and BRDF LUTs (to be open-sourced soon).
 
 
 ## 🔧 Build & Run
