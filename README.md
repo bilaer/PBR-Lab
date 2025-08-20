@@ -1,6 +1,6 @@
 # PBR Lab
 
-**PBR Lab** is an experimental learning project that implements **Physically Based Rendering (PBR)** with **Image-Based Lighting (IBL)** from scratch
+**PBR Lab** is an experimental learning project that implements **Physically Based Rendering (PBR)** with **Image-Based Lighting (IBL)** from scratch.
 All environment maps are generated using my custom **IBL Gen** tool, which produces the **Irradiance Map**, **Prefilter Map**, and **BRDF LUT** on the GPU.
 
 
