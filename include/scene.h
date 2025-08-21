@@ -26,6 +26,9 @@ public:
 
     // API for glb 
     void SetLocalTransformMatrix(const glm::mat4& m);
+
+    void SetMesh(const std::shared_ptr<Mesh>& mesh) { this->mesh = mesh; };
+    void SetMaterial(const std::shared_ptr<PBRMaterial>& material) { this->material = material; };
     
     // Getter functions for local and world transformation matrices
     glm::mat4 GetLocalTransform() const { return this->localTransform; }

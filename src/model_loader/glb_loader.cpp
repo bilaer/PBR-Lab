@@ -129,48 +129,6 @@ bool GlbLoader::LoadFile(const std::string& path, const std::shared_ptr<SceneNod
         return false;
     }
 
-    // ================== Debug / Diagnostics (extensions & images) ==================
-    std::cerr << "[GlbLoader] Loaded: " << path << "\n";
-
-    // extensionsUsed / extensionsRequired
-    std::cerr << "extensionsUsed: ";
-    for (const auto& e : model.extensionsUsed) std::cerr << e << " ";
-    std::cerr << "\nextensionsRequired: ";
-    for (const auto& e : model.extensionsRequired) std::cerr << e << " ";
-    std::cerr << "\n";
-
-    auto hasExt = [&](const char* s){
-        for (const auto& e : model.extensionsUsed) if (e == s) return true;
-        return false;
-    };
-
-    if (hasExt("KHR_draco_mesh_compression"))
-        std::cerr << "[GlbLoader][hint] Model uses Draco compression.\n";
-    if (hasExt("KHR_texture_basisu"))
-        std::cerr << "[GlbLoader][hint] Model uses KTX2/BasisU textures.\n";
-    if (hasExt("KHR_mesh_quantization"))
-        std::cerr << "[GlbLoader][hint] Model uses quantized vertex attributes.\n";
-    if (hasExt("KHR_texture_transform"))
-        std::cerr << "[GlbLoader][hint] Model uses UV transforms.\n";
-
-    // Per-image quick info
-    for (size_t i = 0; i < model.images.size(); ++i) {
-        const auto& img = model.images[i];
-        std::string uriLower = to_lower(img.uri);
-        bool isKTX2 = (!img.uri.empty() && uriLower.size() >= 5 &&
-                       uriLower.substr(uriLower.size()-5) == ".ktx2");
-        std::cerr << "image[" << i << "]: "
-                  << "uri='" << img.uri << "' "
-                  << "mime='" << img.mimeType << "' "
-                  << "w=" << img.width << " h=" << img.height
-                  << " comp=" << img.component
-                  << " pixel_type=" << img.pixel_type
-                  << (isKTX2 ? " [KTX2]" : "")
-                  << (img.image.empty()? " [no decoded pixels]" : "")
-                  << "\n";
-    }
-    // ==============================================================================
-
     // Ensure parent's transforms are valid before attaching children
     parent->UpdateLocalTransform();
     parent->UpdateWorldTransform();

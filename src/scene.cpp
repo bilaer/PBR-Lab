@@ -96,7 +96,6 @@ void Scene::AddNode(const std::shared_ptr<SceneNode>& node) {
 }
 
 void Scene::Render(const std::shared_ptr<Shader>& shader) {
-    // 遍历所有根节点并绘制它们
     for (auto& rootNode : this->rootNodes) {
         rootNode->Draw(shader);  // draw recursively
     }

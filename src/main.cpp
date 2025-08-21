@@ -17,6 +17,7 @@
 #include "imgui_impl_opengl3.h"
 #include "model_loader/ply_loader.h"
 #include "model_loader/glb_loader.h"
+#include "model_loader/gltf_loader.h"
 #include "scene.h"
 
 // ======== Camera state ========
@@ -275,7 +276,7 @@ int main() {
     // Create scene manager
     std::shared_ptr<Scene> scene = std::make_shared<Scene>();
 
-    GlbLoader loader;
+    /*GlbLoader loader;
 
     auto hemlet = std::make_shared<SceneNode>(nullptr, nullptr);
 
@@ -286,7 +287,17 @@ int main() {
         return -1;
     }
     //hemlet->SetScale(glm::vec3(100.0f));
-    scene->AddNode(hemlet);
+    scene->AddNode(hemlet);*/
+
+    GLTFLoader gltfloader;
+
+    auto sponza = std::make_shared<SceneNode>(nullptr, nullptr);
+
+    if (!gltfloader.LoadFile("assets/models/sponza/glTF/Sponza.gltf", sponza)) {
+        std::cerr << "Load glTF failed\n";
+    }
+    scene->AddNode(sponza); // 然后正常 scene.Render(shader)
+
 
 	// Simple object material map testing
 	/*auto plane = std::make_shared<Plane>(2.0f);

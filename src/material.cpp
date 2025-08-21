@@ -4,8 +4,6 @@
 #include "config.h"
 #include <iostream>
 #include <glm/glm.hpp>
-#include "debug.h"
-
 
 PBRMaterial::PBRMaterial(): 
     baseColor(glm::vec3(1.0f, 0.0f, 0.0f)), 
@@ -104,11 +102,6 @@ void PBRMaterial::UploadToShader(const std::shared_ptr<Shader>& shader) const {
         shader->SetUniform("emissiveMap", EMISSIVE_TEXTURE_UNIT);
         emissiveMap->Bind(EMISSIVE_TEXTURE_UNIT);
     }
-
-    DebugDumpSamplerUniform("albedoMap");
-    DebugDumpUnit2D("after UploadToShader (albedo)", ALBEDO_TEXTURE_UNIT);  
-
-
 
 }
 
