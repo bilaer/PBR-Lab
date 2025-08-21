@@ -68,6 +68,9 @@ void PBRMaterial::UploadToShader(const std::shared_ptr<Shader>& shader) const {
     shader->SetUniform("ao",        aoFactor);
     shader->SetUniform("emissive",  emissiveFactor);
 
+    // --- Normal ---
+    shader->SetUniform("useVertexTangent", this->useVertexTangent);
+    shader->SetUniform("normalScale", this->normalScale);
     
     if (albedoMap) {
         shader->SetUniform("albedoMap", ALBEDO_TEXTURE_UNIT);

@@ -3,6 +3,8 @@
 in vec3 WorldPos;
 in vec2 TexCoords;
 in vec3 Normal;
+in vec3 TangentWS;
+in vec3 BitangentWS;
 
 out vec4 FragColor;
 
@@ -22,12 +24,16 @@ uniform bool useAOMap;
 uniform bool useRoughnessMetalMap;
 uniform bool useEmissiveMap;
 
-// Material fallback values if no textures
+// Material fallback values (used when corresponding texture is absent)
 uniform vec3 baseColor;
 uniform float roughness;
 uniform float metalness;
 uniform float ao;
 uniform vec3 emissive;
+
+// Whether use tangent from vertex
+uniform bool  useVertexTangent;
+uniform float normalScale; // = glTF normalTexture.scale）
 
 // Material Texture
 uniform sampler2D albedoMap;
@@ -64,14 +70,22 @@ mat3 cotangent_frame(vec3 N, vec3 p, vec2 uv)
 // Use the TBN matrix to retrieve the normal
 vec3 getNormalFromMap()
 {
-    // Retrieve the normal map (in tangent space) and convert it from [0, 1] to [-1, 1]
-    vec3 tangentNormal = texture(normalMap, TexCoords).xyz * 2.0 - 1.0;
+    vec3 N_ws = normalize(Normal);
 
-    // Get the TBN matrix
-    mat3 TBN = cotangent_frame(Normal, WorldPos, TexCoords);
+    vec3 n_ts = texture(normalMap, TexCoords).xyz * 2.0 - 1.0; // Sample tangent-space normal and remap from [0,1] to [-1,1]
+    n_ts.xy *= normalScale; 
 
-    // Return the transformed normal
-    return normalize(TBN * tangentNormal);  // Apply the TBN matrix to the normal map and return the resulting normal
+    if (useVertexTangent) {
+        // Use TBN built from per-vertex tangent/bitangent
+        vec3 T = normalize(TangentWS);
+        vec3 B = normalize(BitangentWS);
+        mat3 TBN = mat3(T, B, N_ws);
+        return normalize(TBN * n_ts);
+    } else {
+        // Use TBN from screen-space derivatives (robust for procedurally generated geometry)
+        mat3 TBN = cotangent_frame(N_ws, WorldPos, TexCoords);
+        return normalize(TBN * n_ts);
+    }
 }
 
 // Fresnel-Schlick approximation

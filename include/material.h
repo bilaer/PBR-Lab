@@ -23,6 +23,8 @@ class PBRMaterial {
         void SetBaseColor(glm::vec3 baseColor) { this->baseColor = baseColor; };
         void SetAO(float aoFactor) { this->aoFactor = aoFactor; };
         void SetEmissive(glm::vec3 emissiveFactor) { this->emissiveFactor = emissiveFactor; };
+        void SetUseVertexTangent(bool enable) { this->useVertexTangent = enable; };
+        void SetNormalScale(float scale) { this->normalScale = scale; };
         // -----Transparent Setter------
         void SetAlphaMode(AlphaMode m) { alphaMode = m; }
         void SetAlphaCutoff(float c)   { alphaCutoff = c; }
@@ -76,4 +78,8 @@ class PBRMaterial {
         float     alphaCutoff = 0.5f;
         bool      doubleSided = false;
         float     baseAlpha   = 1.0f;
+
+        // Normal
+        bool useVertexTangent = true;   // default: use vertex tangents if mesh has them
+        float normalScale = 1.0f;       // default: glTF normalTexture.scale (1.0 if missing)
 };
