@@ -68,7 +68,12 @@ void PBRMaterial::UploadToShader(const std::shared_ptr<Shader>& shader) const {
     shader->SetUniform("ao",        aoFactor);
     shader->SetUniform("emissive",  emissiveFactor);
 
-    // --- Normal ---
+    // --- Alpha control ---
+    /*shader->SetUniform("alphaCutoff", alphaCutoff);
+    shader->SetUniform("doubleSided", doubleSided);
+    shader->SetUniform("alphaMode", static_cast<int>(alphaMode));*/
+
+    // --- Normal control ---
     shader->SetUniform("useVertexTangent", this->useVertexTangent);
     shader->SetUniform("normalScale", this->normalScale);
     

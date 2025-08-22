@@ -22,6 +22,7 @@
         "src/camera/camera.cpp",
         "src/cubemap/cubemap.cpp",
         "src/texture/texture.cpp",
+        "src/light/light.cpp",
         "src/imgui/imgui.cpp",
         "src/imgui/imgui_draw.cpp",
         "src/imgui/imgui_tables.cpp",

@@ -8,7 +8,7 @@
 
 class PBRMaterial {
     public:
-        enum class AlphaMode { Opaque, Mask, Blend };
+        enum class AlphaMode { Opaque = 0, Mask = 1, Blend = 2}; // Alpha mode
         PBRMaterial();
         // -------Texture Setter--------
         void SetAlbedoMap(const std::shared_ptr<Texture2D>& texture) { this->albedoMap = texture; };
@@ -73,7 +73,7 @@ class PBRMaterial {
         float aoFactor              = 0.0f;
         glm::vec3 emissiveFactor    = glm::vec3(0.0f);
 
-        // Alpha
+        // Alpha control
         AlphaMode alphaMode = AlphaMode::Opaque;
         float     alphaCutoff = 0.5f;
         bool      doubleSided = false;
