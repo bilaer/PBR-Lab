@@ -414,18 +414,23 @@ std::shared_ptr<PBRMaterial> GlbLoader::LoadMaterial(const tinygltf::Model& mode
     const auto& m   = model.materials[materialIndex];
     const auto& pmr = m.pbrMetallicRoughness;
 
-    // Factors
-    if (pmr.baseColorFactor.size()==4) {
+    // ---- Factors ----
+    // baseColorFactor (rgb) + alpha multiplier
+    float baseAlpha = 1.0f;
+    if (pmr.baseColorFactor.size() == 4) {
         mat->SetBaseColor(glm::vec3(
             (float)pmr.baseColorFactor[0],
             (float)pmr.baseColorFactor[1],
             (float)pmr.baseColorFactor[2]
         ));
-        // If you wire alpha: mat->SetBaseAlpha((float)pmr.baseColorFactor[3]);
+        baseAlpha = (float)pmr.baseColorFactor[3];
     }
+    mat->SetBaseAlpha(baseAlpha);
+
     mat->SetRoughness((float)pmr.roughnessFactor);
     mat->SetMetalness((float)pmr.metallicFactor);
-    if (m.emissiveFactor.size()==3) {
+
+    if (m.emissiveFactor.size() == 3) {
         mat->SetEmissive(glm::vec3(
             (float)m.emissiveFactor[0],
             (float)m.emissiveFactor[1],
@@ -433,38 +438,48 @@ std::shared_ptr<PBRMaterial> GlbLoader::LoadMaterial(const tinygltf::Model& mode
         ));
     }
 
-    // Helper: build Texture2D from in-memory image (for embedded textures)
-    auto makeTex = [&](int texIndex, bool isSRGB)->std::shared_ptr<Texture2D> {
+    // ---- Helper: build Texture2D from embedded image ----
+    auto makeTex = [&](int texIndex, bool isSRGB) -> std::shared_ptr<Texture2D> {
         if (texIndex < 0) return nullptr;
         const auto& tex = model.textures[texIndex];
         if (tex.source < 0 || tex.source >= (int)model.images.size()) return nullptr;
         const auto& img = model.images[tex.source];
-        if (img.image.empty() || img.width<=0 || img.height<=0) return nullptr;
+        if (img.image.empty() || img.width <= 0 || img.height <= 0) return nullptr;
         if (img.pixel_type != TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE) {
             std::cerr << "[GlbLoader] unsupported pixel_type=" << img.pixel_type << " (expect UBYTE)\n";
             return nullptr;
         }
-        const int w = img.width, h = img.height, comp = img.component; // 1/2/3/4
         auto t = std::make_shared<Texture2D>();
-        t->CreateFromPixels(img.image.data(), w, h, comp, isSRGB);
+        t->CreateFromPixels(img.image.data(), img.width, img.height, img.component, isSRGB);
         return t;
     };
 
-    // Textures (color space per PBR convention)
-    if (auto t = makeTex(pmr.baseColorTexture.index, true))           mat->SetAlbedoMap(t);           // sRGB
-    if (auto t = makeTex(m.normalTexture.index, false))               mat->SetNormalMap(t);           // Linear
-    if (auto t = makeTex(pmr.metallicRoughnessTexture.index, false))  mat->SetRoughnessMetalMap(t);   // Linear (G roughness, B metallic)
-    if (auto t = makeTex(m.occlusionTexture.index, false))            mat->SetAOMap(t);               // Linear
-    if (auto t = makeTex(m.emissiveTexture.index, true))              mat->SetEmissiveMap(t);         // sRGB
+    // ---- Textures (PBR color space conventions) ----
+    if (auto t = makeTex(pmr.baseColorTexture.index,           /*sRGB*/ true )) mat->SetAlbedoMap(t);
+    if (auto t = makeTex(m.normalTexture.index,                /*sRGB*/ false)) mat->SetNormalMap(t);
+    if (auto t = makeTex(pmr.metallicRoughnessTexture.index,   /*sRGB*/ false)) mat->SetRoughnessMetalMap(t); // G: roughness, B: metallic
+    if (auto t = makeTex(m.occlusionTexture.index,             /*sRGB*/ false)) mat->SetAOMap(t);
+    if (auto t = makeTex(m.emissiveTexture.index,              /*sRGB*/ true )) mat->SetEmissiveMap(t);
 
-    // normalTexture.scale (default 1.0)
-    if (m.normalTexture.scale > 0.0) mat->SetNormalScale((float)m.normalTexture.scale);
-    else                             mat->SetNormalScale(1.0f);
+    // glTF normalTexture.scale (default 1.0)
+    mat->SetNormalScale(m.normalTexture.scale > 0.0 ? (float)m.normalTexture.scale : 1.0f);
 
-    // Alpha/double-sided if you wire queues later:
-    // if (m.alphaMode == "MASK") { mat->SetAlphaMode(PBRMaterial::AlphaMode::Mask); mat->SetAlphaCutoff((float)m.alphaCutoff); }
-    // else if (m.alphaMode == "BLEND") { mat->SetAlphaMode(PBRMaterial::AlphaMode::Blend); }
-    // mat->SetDoubleSided(m.doubleSided);
+    // ---- Alpha mode / cutoff / double-sided ----
+    // alphaMode: "OPAQUE" (default), "MASK", "BLEND"
+    PBRMaterial::AlphaMode mode = PBRMaterial::AlphaMode::Opaque;
+    if (m.alphaMode == "MASK") {
+        mode = PBRMaterial::AlphaMode::Mask;
+        // alphaCutoff default = 0.5 if not specified by the asset
+        float cutoff = (m.alphaCutoff > 0.0) ? (float)m.alphaCutoff : 0.5f;
+        mat->SetAlphaCutoff(cutoff);
+    } else if (m.alphaMode == "BLEND") {
+        mode = PBRMaterial::AlphaMode::Blend;
+    } // else Opaque
+    mat->SetAlphaMode(mode);
+
+    // doubleSided
+    mat->SetDoubleSided(m.doubleSided);
 
     return mat;
 }
+

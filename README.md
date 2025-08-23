@@ -8,7 +8,7 @@ All environment maps are generated using my custom **IBL Gen** tool, which produ
 
 - **Basic glTF PBR Pipeline**
   - Currently supports the standard glTF 2.0 metallic-roughness workflow
-  - Core maps: albedo, normal, roughness, metallic, AO, emissive
+  - Core maps: albedo, normal, roughness, metallic, AO, emissive, alpha blend
 - **Model Loading**
   - Load `.ply` files (via Assimp)
   - Load `.glb` / `.gltf` files (via TinyGLTF)

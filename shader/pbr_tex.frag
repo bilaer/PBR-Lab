@@ -24,6 +24,12 @@ uniform bool useAOMap;
 uniform bool useRoughnessMetalMap;
 uniform bool useEmissiveMap;
 
+// Alpha control 
+uniform bool doubleSided;
+uniform float alphaCutoff;
+uniform int alphaMode;
+uniform float baseAlpha;
+
 // Material fallback values (used when corresponding texture is absent)
 uniform vec3 baseColor;
 uniform float roughness;
@@ -31,8 +37,8 @@ uniform float metalness;
 uniform float ao;
 uniform vec3 emissive;
 
-// Whether use tangent from vertex
-uniform bool  useVertexTangent;
+// Normal mapping options
+uniform bool  useVertexTangent; // true = use vertex tangents; false = build TBN from derivatives
 uniform float normalScale; // = glTF normalTexture.scale）
 
 // Material Texture
@@ -96,12 +102,50 @@ vec3 FresnelSchlick(float cosTheta, vec3 F0) {
 vec3 fresnelSchlickRoughness(float cosTheta, vec3 F0, float roughness)
 {
     return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
-} 
+}
+
+// Window for distance attenuation, "Moving Frosbite to PBR"
+float smoothDistanceAtt(float squareDistance, float invSqrAttRadius) {
+    float factor = squareDistance * invSqrAttRadius;
+    float smoothFactor = clamp(1.0 - factor * factor, 0.0, 1.0);
+    return smoothFactor * smoothFactor;
+}
+
+// Distance attenuation for punctural and area light, "Moving Frosbite to PBR"
+float getDistanceAtt(float lightVector, float invSqrAttRadius) {
+    float sqrDist = dot(lightVector, lightVector);
+    float att = 1.0 / (max(sqrDist, 0.01 * 0.01));
+    return att * smoothDistanceAtt(sqrDist, invSqrAttRadius);
+}
+
+// Angle attenuation for spotlights
+// angleScale and angleOffset is precompuated in cpu
+float getAngleAtt(float lightVector, float lightDir, float angleScale, float angleOffset) {
+    float cosDist = dot(lightVector, lightDir);
+    float att = clamp(cosDist * angleScale + angleOffset, 0.0, 1.0);
+    return att * att;
+}
 
 void main()
 {
-    // Albedo
+    // Albedo with gama correction
     vec3 baseColorFinal = useAlbedoMap ? pow(texture(albedoMap, TexCoords).rgb, vec3(2.2)) : baseColor;
+
+    // Alpha 
+    float alphaTex = useAlbedoMap ? texture(albedoMap, TexCoords).a : 1.0;
+    float alphaFinal = alphaTex * baseAlpha;
+
+    // For alpha mask
+    if(alphaMode == 1) {
+        if(alphaFinal < alphaCutoff) {
+            discard;
+        }
+        alphaFinal = 1.0;
+    }
+    // For Opaque (0), force alpha=1.0
+    if (alphaMode == 0) {
+        alphaFinal = 1.0;
+    }
 
     // Roughness and metalic
     float roughnessFinal;
@@ -120,11 +164,15 @@ void main()
     // Emissive
     vec3 emissiveFinal = useEmissiveMap ? texture(emissiveMap, TexCoords).rgb : emissive;
 
-    // Transform normal from tangent space to world space
+    // Normal
     vec3 N = useNormalMap ? getNormalFromMap() : normalize(Normal);
     vec3 V = normalize(camPos - WorldPos);
     vec3 R = normalize(reflect(-V, N));
     float NdotV = max(dot(N, V), 0.0);
+    // Double-sided: flip normal on back faces to keep lighting consistent
+    if (doubleSided && !gl_FrontFacing) {
+        N = -N;
+    }
 
     // calculate reflectance at normal incidence; if dia-electric (like plastic) use F0 
     // of 0.04 and if it's a metal, use the albedo color as F0 (metallic workflow) 
@@ -153,5 +201,5 @@ void main()
     // gamma correct
     color = pow(color, vec3(1.0/2.2));
 
-    FragColor = vec4(color, 1.0);
+    FragColor = vec4(color, alphaFinal);
 }

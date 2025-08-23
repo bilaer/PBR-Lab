@@ -138,5 +138,16 @@ class Plane: public Mesh
     
 };
 
+//=========================================
+//                  Ray
+//=========================================
+// Use for ray intersection and etc
+struct Ray {
+    glm::vec3 origin;
+    glm::vec3 direction;
+
+    Ray(const glm::vec3& origin, const glm::vec3& dir)
+        : origin(origin), direction(glm::normalize(dir)) {}
+};
 
 

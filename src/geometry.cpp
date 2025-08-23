@@ -272,3 +272,4 @@ void Plane::GenerateIndices() {
         2, 3, 0
     };
 }
+

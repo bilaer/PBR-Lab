@@ -4,6 +4,8 @@
 
 // math
 constexpr float PI = 3.14159265358979323846f;
+// Used in ray intersection (AABB class) to test if value is lower than the threshold
+constexpr float EPSILON = 1e-8f;
 
 // texture unit for PBR 
 constexpr unsigned DEFAULT_TEXTURE_UNIT    = 0;

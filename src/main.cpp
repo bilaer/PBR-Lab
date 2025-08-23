@@ -17,7 +17,6 @@
 #include "imgui_impl_opengl3.h"
 #include "model_loader/ply_loader.h"
 #include "model_loader/glb_loader.h"
-#include "model_loader/gltf_loader.h"
 #include "scene.h"
 
 // ======== Camera state ========
@@ -264,14 +263,14 @@ int main() {
 
 	//================Load Testing Model/objects=====================
 	// Load complex ply model
-	Mesh loadedModel;
+	/*Mesh loadedModel;
 	std::string modelPath = "assets/models/dragon_vrip.ply";
     if (LoadPLYToMesh(modelPath, loadedModel)) {
         std::cout << "PLY model loaded and transformed successfully!" << std::endl;
     } else {
         std::cerr << "Failed to load and transform PLY model." << std::endl;
         return -1;  // Exit if loading fails
-    }
+    }*/
 
     // Create scene manager
     std::shared_ptr<Scene> scene = std::make_shared<Scene>();
@@ -280,7 +279,7 @@ int main() {
 
     auto hemlet = std::make_shared<SceneNode>(nullptr, nullptr);
 
-    const std::string glbPath = "assets/models/DamagedHelmet.glb";
+    const std::string glbPath = "assets/models/sponza/glTF/Sponza.gltf";
 
     if (!loader.LoadFile(glbPath, hemlet)) {
         std::cerr << "Load glb failed\n";
@@ -288,16 +287,6 @@ int main() {
     }
     //hemlet->SetScale(glm::vec3(100.0f));
     scene->AddNode(hemlet);
-
-    GLTFLoader gltfloader;
-
-    auto sponza = std::make_shared<SceneNode>(nullptr, nullptr);
-
-    if (!gltfloader.LoadFile("assets/models/sponza/glTF/Sponza.gltf", sponza)) {
-        std::cerr << "Load glTF failed\n";
-    }
-    scene->AddNode(sponza); //
-
 
 	// Simple object material map testing
 	/*auto plane = std::make_shared<Plane>(2.0f);
@@ -366,7 +355,7 @@ int main() {
         pbrShader->SetUniform("projection", proj);
         pbrShader->SetUniform("camPos", camPos);
 
-        scene->Render(pbrShader);
+        scene->Render(pbrShader, camPos);
 
     	//plane->Draw();
 

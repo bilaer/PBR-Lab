@@ -10,7 +10,11 @@ PBRMaterial::PBRMaterial():
     metalness(0.0f), 
     roughness(0.5f), 
     aoFactor(1.0f), 
-    emissiveFactor(glm::vec3(0.0f)) {
+    emissiveFactor(glm::vec3(0.0f)),
+    alphaMode(AlphaMode::Opaque),
+    alphaCutoff(0.5f),
+    doubleSided(false),
+    baseAlpha(1.0f) {
     // Set default fallback values for material
 }
 
@@ -69,9 +73,10 @@ void PBRMaterial::UploadToShader(const std::shared_ptr<Shader>& shader) const {
     shader->SetUniform("emissive",  emissiveFactor);
 
     // --- Alpha control ---
-    /*shader->SetUniform("alphaCutoff", alphaCutoff);
+    shader->SetUniform("alphaCutoff", alphaCutoff);
     shader->SetUniform("doubleSided", doubleSided);
-    shader->SetUniform("alphaMode", static_cast<int>(alphaMode));*/
+    shader->SetUniform("alphaMode", static_cast<int>(alphaMode));
+    shader->SetUniform("baseAlpha", baseAlpha);
 
     // --- Normal control ---
     shader->SetUniform("useVertexTangent", this->useVertexTangent);
